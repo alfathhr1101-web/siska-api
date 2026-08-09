@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIS4D WD Dashboard</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <div class="container">
+
+    <div class="header">
+      <h1>SIS4D WD Dashboard</h1>
+      <div class="realtime">Realtime</div>
+    </div>
+
+    <div class="stats">
+      <div class="card">
+        <h3 id="pendingCount">0</h3>
+        <p>Pending</p>
+      </div>
+
+      <div class="card">
+        <h3 id="successCount">0</h3>
+        <p>Success</p>
+      </div>
+
+      <div class="card">
+        <h3 id="totalCount">0</h3>
+        <p>Total</p>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Jam</th>
+            <th>User</th>
+            <th>Bank</th>
+            <th>Nama</th>
+            <th>Rekening</th>
+            <th>Nominal</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="txBody"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
