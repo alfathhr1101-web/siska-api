@@ -12,7 +12,12 @@
     "vite": "^8.2.0"
   },
   "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "googleapis": "^174.0.1",
     "mysql2": "^3.23.2",
-    "playwright": "^1.62.1"
+    "playwright": "^1.62.1",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
   }
 }

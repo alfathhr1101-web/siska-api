@@ -1,57 +1,105 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SIS4D WD Dashboard</title>
-  <link rel="stylesheet" href="/style.css" />
+
+  <title>SIS4D Operator Panel</title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/src/styles/app.css" />
+  <link rel="stylesheet" href="/src/styles/layout.css" />
+  <link rel="stylesheet" href="/src/styles/sidebar.css" />
+  <link rel="stylesheet" href="/src/styles/navbar.css" />
+  <link rel="stylesheet" href="/src/styles/cards.css" />
+  <link rel="stylesheet" href="/src/styles/table.css" />
+
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 </head>
+
 <body>
 
-  <div class="container">
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar"></aside>
 
-    <div class="header">
-      <h1>SIS4D WD Dashboard</h1>
-      <div class="realtime">Realtime</div>
-    </div>
+  <!-- Main -->
+  <div class="main">
 
-    <div class="stats">
-      <div class="card">
-        <h3 id="pendingCount">0</h3>
-        <p>Pending</p>
+    <!-- Navbar -->
+    <header id="navbar"></header>
+
+    <!-- Content -->
+    <main id="app">
+
+      <!-- loading awal -->
+      <div class="page-loading">
+        <div class="spinner"></div>
+        <p>Memuat dashboard...</p>
       </div>
 
-      <div class="card">
-        <h3 id="successCount">0</h3>
-        <p>Success</p>
+    </main>
+
+  </div>
+
+  <!-- =========================
+       BANK MODAL
+  ========================== -->
+  <div id="bankModal" class="modal hidden">
+
+    <div class="modal-card">
+
+      <div class="modal-header">
+        <h3 id="bankModalTitle">Tambah Bank</h3>
+        <button id="closeBankModal" class="modal-close">✕</button>
       </div>
 
-      <div class="card">
-        <h3 id="totalCount">0</h3>
-        <p>Total</p>
-      </div>
-    </div>
+      <div class="modal-body">
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Jam</th>
-            <th>User</th>
-            <th>Bank</th>
-            <th>Nama</th>
-            <th>Rekening</th>
-            <th>Nominal</th>
-            <th>Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="txBody"></tbody>
-      </table>
+        <div class="form-group">
+          <label>Nama Bank</label>
+          <input id="bankName" type="text" placeholder="BCA DESI" />
+        </div>
+
+        <div class="form-group">
+          <label>Spreadsheet ID</label>
+          <input id="bankSpreadsheet" type="text" placeholder="1abc..." />
+        </div>
+
+        <div class="form-group">
+          <label>Nama Sheet</label>
+          <input id="bankSheet" type="text" placeholder="BCA DESI" />
+        </div>
+
+        <div class="form-group">
+          <label>Start Row</label>
+          <input id="bankStartRow" type="number" value="7" />
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button id="cancelBankModal" class="secondary-btn">Batal</button>
+        <button id="saveBankBtn" class="primary-btn">Simpan</button>
+      </div>
+
     </div>
 
   </div>
 
+  <!-- =========================
+       TOAST NOTIFICATION
+  ========================== -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- =========================
+       SCRIPT
+  ========================== -->
   <script type="module" src="/src/main.js"></script>
+
 </body>
+
 </html>

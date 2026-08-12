@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIS4D Operator</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+  <div class="card">
+
+    <div class="header">
+      <div class="logo">🚀</div>
+      <div>
+        <h1>SIS4D Operator</h1>
+        <p>Realtime Sheet Sync</p>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Admin Login</label>
+      <input
+        type="text"
+        id="loginUser"
+        readonly
+        value="Memuat..."
+      >
+    </div>
+
+    <div class="field">
+      <label>Bank Aktif</label>
+
+      <select id="bankSelect">
+        <option value="">Memuat bank...</option>
+      </select>
+    </div>
+
+    <button id="saveBank">
+      💾 Simpan Bank Aktif
+    </button>
+
+    <div id="statusText" class="status">
+      Belum memilih bank aktif
+    </div>
+
+    <div class="note">
+      Transaksi approve otomatis masuk ke sheet bank yang dipilih admin ini.
+    </div>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

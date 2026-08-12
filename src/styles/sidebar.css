@@ -1,0 +1,23 @@
+.sidebar{
+  width:240px;
+  background:#031341;
+  padding:20px;
+}
+
+.sidebar-nav{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.nav-item{
+  color:#cbd5e1;
+  text-decoration:none;
+  padding:12px;
+  border-radius:12px;
+}
+
+.nav-item.active{
+  background:#2563eb;
+  color:#fff;
+}

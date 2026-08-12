@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "SIS4D Realtime Monitor",
+  "version": "1.1.0",
+  "description": "Monitor pending dan history WD SIS4D realtime",
+
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab"
+  ],
+
+  "host_permissions": [
+    "https://sis4dmimin.com/*",
+    "http://127.0.0.1:3001/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "action": {
+    "default_popup": "popup.html"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://sis4dmimin.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

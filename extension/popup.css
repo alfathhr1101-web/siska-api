@@ -1,0 +1,98 @@
+body{
+  margin:0;
+  width:320px;
+  background:#04123a;
+  font-family:Arial,sans-serif;
+  color:#fff;
+}
+
+.card{
+  padding:18px;
+}
+
+.header{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:20px;
+}
+
+.logo{
+  width:52px;
+  height:52px;
+  border-radius:16px;
+  background:#2c5fe3;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+}
+
+.header h1{
+  margin:0;
+  font-size:18px;
+}
+
+.header p{
+  margin:2px 0 0;
+  color:#b8c4ff;
+  font-size:12px;
+}
+
+.field{
+  margin-bottom:16px;
+}
+
+label{
+  display:block;
+  margin-bottom:8px;
+  font-size:13px;
+  color:#fff;
+}
+
+input,
+select{
+  width:100%;
+  box-sizing:border-box;
+  padding:12px;
+  border-radius:14px;
+  border:1px solid #28448f;
+  background:#0b215f;
+  color:#fff;
+  font-size:15px;
+}
+
+button{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  background:#2c5fe3;
+  color:#fff;
+  font-size:15px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+button:hover{
+  background:#3c6fff;
+}
+
+.status{
+  margin-top:14px;
+  text-align:center;
+  color:#7cff8f;
+  font-size:14px;
+  font-weight:bold;
+  min-height:20px;
+}
+
+.note{
+  margin-top:18px;
+  padding:12px;
+  border-radius:12px;
+  background:#0b215f;
+  color:#d9e2ff;
+  font-size:12px;
+  line-height:1.5;
+}
