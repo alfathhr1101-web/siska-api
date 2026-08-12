@@ -29,12 +29,12 @@ async function getNextRow(sheetName){
 
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `'${sheetName}'!B4:B1000`
+    range: `'${sheetName}'!B7:B1000`
   });
 
   const rows = res.data.values || [];
 
-  let row = 4;
+  let row = 7;
 
   for(const r of rows){
 
@@ -69,7 +69,7 @@ function extractNama(bankTujuan){
 }
 
 // =====================================
-// HITUNG BIAYA ADMIN FINAL
+// HITUNG BIAYA ADMIN
 // =====================================
 function getAdminFee(bankAktif, bankTujuan){
 
@@ -88,22 +88,12 @@ function getAdminFee(bankAktif, bankTujuan){
   }
 
   // ewallet gratis
-  if (tujuan === 'DANA') {
-    return 0;
-  }
-
-  if (tujuan === 'OVO') {
-    return 0;
-  }
+  if (tujuan === 'DANA') return 0;
+  if (tujuan === 'OVO') return 0;
 
   // ewallet kena 1000
-  if (tujuan === 'GOPAY') {
-    return 1000;
-  }
-
-  if (tujuan === 'LINKAJA') {
-    return 1000;
-  }
+  if (tujuan === 'GOPAY') return 1000;
+  if (tujuan === 'LINKAJA') return 1000;
 
   // selain itu beda bank kena 2500
   return 2500;
@@ -135,10 +125,12 @@ export async function appendToSheet(sheetName, item){
       range: `'${sheetName}'!B${row}`,
       values: [[ nama ]]
     },
+
     {
       range: `'${sheetName}'!C${row}`,
       values: [[ item.nominal ]]
     },
+
     {
       range: `'${sheetName}'!F${row}`,
       values: [[ item.userId ]]
@@ -159,6 +151,7 @@ export async function appendToSheet(sheetName, item){
         values: [[ biayaAdmin ]]
       }
     );
+
   }
 
   await sheets.spreadsheets.values.batchUpdate({
