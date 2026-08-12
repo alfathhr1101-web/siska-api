@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const bankSelect = document.getElementById('bankSelect');
   const saveBtn = document.getElementById('saveBank');
   const statusEl = document.getElementById('statusText');
+  const botToggle = document.getElementById('botEnabled');
+  const botStatus = document.getElementById('botStatus');
 
   // ambil admin login dari content script
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -23,7 +25,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         loginInput.value = operator;
 
-        await loadBanks(operator);
+await loadBanks(operator);
+
+// =====================================
+// LOAD STATUS BOT
+// =====================================
+chrome.storage.local.get(
+  [`sis4d_bot_${operator.toLowerCase()}`],
+  (res) => {
+
+    const enabled =
+      res[`sis4d_bot_${operator.toLowerCase()}`] !== false;
+
+    botToggle.checked = enabled;
+
+    updateBotLabel(enabled);
+  }
+);
+        
       }
     );
   });
@@ -82,39 +101,77 @@ document.addEventListener('DOMContentLoaded', async () => {
     );
   }
 
-  // simpan bank aktif TANPA POPUP
-  saveBtn.addEventListener('click', () => {
+// simpan bank aktif TANPA POPUP
+saveBtn.addEventListener('click', () => {
 
-    const operator = loginInput.value.trim();
-    const bank = bankSelect.value;
+  const operator = loginInput.value.trim();
+  const bank = bankSelect.value;
 
-    if (!operator || !bank) {
+  if (!operator || !bank) {
 
-      statusEl.textContent =
-        'Pilih bank terlebih dahulu';
+    statusEl.textContent =
+      'Pilih bank terlebih dahulu';
 
-      statusEl.style.color = '#ff6b6b';
+    statusEl.style.color = '#ff6b6b';
 
-      return;
-    }
+    return;
+  }
 
-    chrome.storage.local.set({
-      [`sis4d_bank_${operator.toLowerCase()}`]: bank
-    }, () => {
+  chrome.storage.local.set({
+    [`sis4d_bank_${operator.toLowerCase()}`]: bank
+  }, () => {
 
-      updateStatus(bank);
+    updateStatus(bank);
 
-      statusEl.style.color = '#7cff8f';
+    statusEl.style.color = '#7cff8f';
 
-      saveBtn.textContent = '✓ Tersimpan';
+    saveBtn.textContent = '✓ Tersimpan';
 
-      setTimeout(() => {
-        saveBtn.textContent = '💾 Simpan Bank Aktif';
-      }, 1200);
-    });
+    setTimeout(() => {
+      saveBtn.textContent = '💾 Simpan Bank Aktif';
+    }, 1200);
   });
 
-  function updateStatus(bank) {
-    statusEl.textContent = `✓ Bank aktif: ${bank}`;
-  }
+}); // <--- penutup saveBtn
+
+
+// =====================================
+// TAMBAH MULAI DARI SINI
+// =====================================
+
+// simpan status bot
+botToggle.addEventListener('change', () => {
+
+  const operator = loginInput.value.trim();
+
+  const enabled = botToggle.checked;
+
+  chrome.storage.local.set({
+    [`sis4d_bot_${operator.toLowerCase()}`]: enabled
+  });
+
+  updateBotLabel(enabled);
 });
+
+// label BOT
+function updateBotLabel(enabled){
+
+  botStatus.textContent = enabled
+    ? '🟢 BOT AKTIF'
+    : '🔴 BOT OFF';
+
+  botStatus.style.color = enabled
+    ? '#7cff8f'
+    : '#ff6b6b';
+}
+
+// =====================================
+// SAMPAI SINI
+// =====================================
+
+
+function updateStatus(bank) {
+  statusEl.textContent = `✓ Bank aktif: ${bank}`;
+}
+
+}); // penutup DOMContentLoaded

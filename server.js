@@ -87,7 +87,12 @@ app.get('/health', (req, res) => {
 // =========================
 app.post('/api/admin-status', (req, res) => {
 
-  const { admin, activeBank, lastSeen } = req.body;
+  const {
+    admin,
+    activeBank,
+    botEnabled,
+    lastSeen
+  } = req.body;
 
   if (!admin) {
     return res.status(400).json({
@@ -99,6 +104,7 @@ app.post('/api/admin-status', (req, res) => {
   adminStatus[admin.toLowerCase()] = {
     admin: admin.toLowerCase(),
     activeBank,
+    botEnabled: botEnabled !== false,
     lastSeen: lastSeen || Date.now()
   };
 

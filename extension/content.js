@@ -26,10 +26,12 @@ function getCurrentLogin(){
 
   const text = document.body.innerText;
 
-  // ambil username di navbar
-  const match = text.match(/([A-Z0-9_]+)\s+\|\s+[A-Z0-9_]+/i);
+  // contoh: "alfath | logout"
+  const match = text.match(/([A-Za-z0-9_]+)\s+\|/i);
 
-  return match ? match[1].toLowerCase() : 'unknown';
+  return match
+    ? match[1].toLowerCase()
+    : 'unknown';
 }
 
 const currentLogin = getCurrentLogin();
@@ -64,11 +66,26 @@ async function sendHeartbeat(){
 
   const bank = await getActiveBank();
 
+  // ambil status bot
+  const botEnabled = await new Promise(resolve => {
+
+    chrome.storage.local.get(
+      [`sis4d_bot_${currentLogin.toLowerCase()}`],
+      (res) => {
+
+        resolve(
+          res[`sis4d_bot_${currentLogin.toLowerCase()}`] !== false
+        );
+      }
+    );
+  });
+
   chrome.runtime.sendMessage({
     type: 'ADMIN_STATUS',
     data: {
       admin: currentLogin,
       activeBank: bank,
+      botEnabled,
       lastSeen: Date.now()
     }
   });
@@ -78,7 +95,7 @@ async function sendHeartbeat(){
 sendHeartbeat();
 
 // kirim tiap 30 detik
-setInterval(sendHeartbeat, 30000);
+setInterval(sendHeartbeat, 5000);
 
 // =====================================
 // HELPER
@@ -109,13 +126,15 @@ function extractAtasNama(bankText){
 // =====================================
 // KIRIM TRANSAKSI KE SERVER
 // =====================================
-function sendTransaction(data){
+async function sendTransaction(data){
+
+  const activeBank = await getActiveBank();
 
   chrome.runtime.sendMessage({
     type: 'SEND_TO_API',
     data: {
       ...data,
-      activeBank: getActiveBank()
+      bankAktif: activeBank
     }
   });
 }

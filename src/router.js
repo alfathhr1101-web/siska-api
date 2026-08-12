@@ -187,7 +187,7 @@ data.forEach(x => {
 
     body.innerHTML = data.map(x=>`
       <tr>
-        <td>${x.online ? '🟢 Online' : '⚫ Offline'}</td>
+        <td>${x.botEnabled ? '🟢 Online' : '🔴 Bot Off'}</td>
         <td>${x.admin}</td>
         <td>${x.activeBank || '-'}</td>
         <td>${new Date(x.lastSeen).toLocaleTimeString('id-ID')}</td>
@@ -328,7 +328,7 @@ function bindBankActions(banks){
       name: nameInput.value.trim(),
       spreadsheetId: spreadsheetInput.value.trim(),
       sheetName: sheetInput.value.trim(),
-      startRow: Number(rowInput.value || 7)
+      startRow: Number(rowInput.value || 4)
     };
 
     if(!payload.name){
