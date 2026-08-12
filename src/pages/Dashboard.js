@@ -1,4 +1,71 @@
-export function DashboardPage(){
+// =====================================
+// HITUNG BIAYA ADMIN UNTUK DASHBOARD
+// =====================================
+function getBiayaAdmin(admin, bankTujuan){
+
+  const tujuan = (bankTujuan || '')
+    .split('-')[0]
+    .trim()
+    .toUpperCase();
+
+  // mapping bank aktif admin
+  const bankAdminMap = {
+    alfath: 'BCA',
+    reza: 'BNI',
+    robi: 'BCA'
+  };
+
+  const asal =
+    bankAdminMap[(admin || '').toLowerCase()] || '';
+
+  // sesama bank gratis
+  if (asal === tujuan) return 0;
+
+  // ewallet gratis
+  if (tujuan === 'DANA') return 0;
+  if (tujuan === 'OVO') return 0;
+
+  // ewallet kena 1000
+  if (tujuan === 'GOPAY') return 1000;
+  if (tujuan === 'LINKAJA') return 1000;
+
+  // beda bank kena 2500
+  return 2500;
+}
+
+// =====================================
+// FORMAT RUPIAH
+// =====================================
+function rupiah(n){
+  return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+}
+
+// =====================================
+// HALAMAN DASHBOARD
+// =====================================
+export function DashboardPage(data = []){
+
+  const rows = data.map((item, i) => {
+
+    const biaya = getBiayaAdmin(
+      item.admin,
+      item.bankTujuan
+    );
+
+    return `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${item.tanggal || '-'}</td>
+        <td>${item.username || '-'}</td>
+        <td>${item.bankTujuan || '-'}</td>
+        <td>${rupiah(item.nominal)}</td>
+        <td style="color:#f59e0b;font-weight:700">
+          ${rupiah(biaya)}
+        </td>
+        <td>${item.admin || '-'}</td>
+      </tr>
+    `;
+  }).join('');
 
   return `
     <section class="kpi-grid">
@@ -21,16 +88,19 @@ export function DashboardPage(){
 
         <thead>
           <tr>
-            <th>No</th>
-            <th>Tanggal</th>
-            <th>Username</th>
-            <th>Bank Tujuan</th>
-            <th>Nominal</th>
-            <th>Admin</th>
+            <th>NO</th>
+            <th>TANGGAL</th>
+            <th>USERNAME</th>
+            <th>BANK TUJUAN</th>
+            <th>NOMINAL</th>
+            <th>BIAYA ADMIN</th>
+            <th>ADMIN</th>
           </tr>
         </thead>
 
-        <tbody id="dataBody"></tbody>
+        <tbody id="dataBody">
+          ${rows}
+        </tbody>
 
       </table>
 

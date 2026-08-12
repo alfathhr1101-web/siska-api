@@ -7,23 +7,21 @@ import { BanksPage } from './pages/Banks.js';
 // =========================
 // API ENDPOINT
 // =========================
-const API_BASE = 'http://127.0.0.1:3001/api';
-
 const API = {
-  logs: `${API_BASE}/logs`,
-  admins: `${API_BASE}/admin-status`,
-  banks: `${API_BASE}/banks`
+  logs: 'http://103.193.179.47/api/logs',
+  admins: 'http://103.193.179.47/api/admin-status',
+  banks: 'http://103.193.179.47/api/banks'
 };
 
 // =========================
 // SOCKET
 // =========================
-const socket = io('http://127.0.0.1:3001', {
+const socket = io('http://103.193.179.47', {
   transports: ['websocket']
 });
 
 const app = document.getElementById('app');
-
+let adminStatusMap = {};
 // =========================
 // ROUTER
 // =========================
@@ -44,9 +42,10 @@ async function render(){
       break;
 
     default:
-      app.innerHTML = DashboardPage();
-      await loadLogs();
-      break;
+  await loadAdmins();
+  app.innerHTML = DashboardPage();
+  await loadLogs();
+  break;
   }
 
   setActive(hash.replace('#',''));
@@ -61,6 +60,57 @@ function setActive(page){
     ?.classList.add('active');
 }
 
+function getBiayaAdmin(admin, bankTujuan){
+
+  const asal =
+    (adminStatusMap[
+      (admin || '').toLowerCase()
+    ] || '')
+    .toUpperCase();
+
+  const tujuan = (bankTujuan || '')
+    .split('-')[0]
+    .trim()
+    .toUpperCase();
+
+  // sesama bank gratis
+  if (asal === tujuan) return 0;
+
+  // ewallet gratis
+  if (tujuan === 'DANA') return 0;
+  if (tujuan === 'OVO') return 0;
+
+  // ewallet kena 1000
+  if (tujuan === 'GOPAY') return 1000;
+  if (tujuan === 'LINKAJA') return 1000;
+
+  // selain itu beda bank
+  return 2500;
+}
+
+// =========================
+// HITUNG BIAYA ADMIN
+// =========================
+function getAdminFee(item) {
+
+  const tujuan = (item.bankTujuan || '')
+    .split('-')[0]
+    .trim()
+    .toUpperCase();
+
+  const bankAdmin = (item.bankAktif || '')
+    .trim()
+    .toUpperCase();
+
+  // sesama bank gratis
+  if (tujuan === bankAdmin) {
+    return 0;
+  }
+
+  // beda bank kena biaya transfer
+  return 2500;
+}
+
 // =========================
 // LOAD LOGS
 // =========================
@@ -69,7 +119,6 @@ async function loadLogs(){
   try{
 
     const res = await fetch(API.logs);
-
     const data = await res.json();
 
     renderLogTable(data);
@@ -92,7 +141,15 @@ function renderLogTable(data){
       <td>${x.tanggal || '-'}</td>
       <td>${x.username || '-'}</td>
       <td>${x.bankTujuan || '-'}</td>
-      <td>Rp ${Number(x.nominal || 0).toLocaleString('id-ID')}</td>
+
+      <td>
+        Rp ${Number(x.nominal || 0).toLocaleString('id-ID')}
+      </td>
+
+      <td style="color:#f59e0b;font-weight:700">
+        Rp ${getBiayaAdmin(x.admin, x.bankTujuan).toLocaleString('id-ID')}
+      </td>
+
       <td>${x.admin || '-'}</td>
     </tr>
   `).join('');
@@ -106,8 +163,23 @@ async function loadAdmins(){
   try{
 
     const res = await fetch(API.admins);
-
     const data = await res.json();
+    adminStatusMap = {};
+
+data.forEach(x => {
+  adminStatusMap[
+    (x.admin || '').toLowerCase()
+  ] = x.activeBank || '';
+});
+
+    // simpan mapping admin -> bank aktif
+    adminStatusMap = {};
+
+    data.forEach(x => {
+      adminStatusMap[
+        (x.admin || '').toLowerCase()
+      ] = x.activeBank || '';
+    });
 
     const body = document.getElementById('adminBody');
 
@@ -125,6 +197,7 @@ async function loadAdmins(){
   }catch(err){
 
     console.error('Gagal load admins:', err);
+
   }
 }
 
@@ -136,7 +209,6 @@ async function loadBanks(){
   try{
 
     const res = await fetch(API.banks);
-
     const data = await res.json();
 
     const body = document.getElementById('bankBody');
@@ -198,11 +270,8 @@ function bindBankActions(banks){
     title.textContent = 'Tambah Bank';
 
     nameInput.value = '';
-
     spreadsheetInput.value = '';
-
     sheetInput.value = '';
-
     rowInput.value = 7;
 
     modal.classList.remove('hidden');
@@ -229,11 +298,8 @@ function bindBankActions(banks){
       title.textContent = 'Edit Bank';
 
       nameInput.value = bank.name || '';
-
       spreadsheetInput.value = bank.spreadsheetId || '';
-
       sheetInput.value = bank.sheetName || '';
-
       rowInput.value = bank.startRow || 7;
 
       modal.classList.remove('hidden');
@@ -259,13 +325,9 @@ function bindBankActions(banks){
   saveBtn.onclick = async () => {
 
     const payload = {
-
       name: nameInput.value.trim(),
-
       spreadsheetId: spreadsheetInput.value.trim(),
-
       sheetName: sheetInput.value.trim(),
-
       startRow: Number(rowInput.value || 7)
     };
 
@@ -316,6 +378,8 @@ socket.on('new-log', (item) => {
 
   if (!body) return;
 
+  const fee = getAdminFee(item);
+
   const row = `
     <tr>
       <td>1</td>
@@ -323,6 +387,9 @@ socket.on('new-log', (item) => {
       <td>${item.username}</td>
       <td>${item.bankTujuan}</td>
       <td>Rp ${Number(item.nominal).toLocaleString('id-ID')}</td>
+      <td style="color:${fee ? '#ffb020' : '#7cff8f'};font-weight:600">
+        ${fee ? 'Rp ' + fee.toLocaleString('id-ID') : 'Gratis'}
+      </td>
       <td>${item.admin}</td>
     </tr>
   `;

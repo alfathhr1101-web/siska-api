@@ -4,7 +4,7 @@
     "name": "DENA SAHPUTRA",
     "spreadsheetId": "1p02wT0OaCFQ2Lfkgha0-TCNcIUvEYhHqs4JWI9xlVGM",
     "sheetName": "DENA SAHPUTRA",
-    "startRow": 7,
+    "startRow": 4,
     "active": true
   },
   {
@@ -12,7 +12,31 @@
     "name": "BNI SAMUEL PARASIAN BRUTU",
     "spreadsheetId": "1p02wT0OaCFQ2Lfkgha0-TCNcIUvEYhHqs4JWI9xlVGM",
     "sheetName": "BNI SAMUEL PARASIAN BRUTU",
-    "startRow": 7,
+    "startRow": 4,
+    "active": true
+  },
+  {
+    "id": 3,
+    "name": "BCA AGUS SUNARTO",
+    "spreadsheetId": "1p02wT0OaCFQ2Lfkgha0-TCNcIUvEYhHqs4JWI9xlVGM",
+    "sheetName": "BCA AGUS SUNARTO",
+    "startRow": 4,
+    "active": true
+  },
+  {
+    "id": 4,
+    "name": "BNI SAMUEL PARASIAN BRUTU",
+    "spreadsheetId": "1p02wT0OaCFQ2Lfkgha0-TCNcIUvEYhHqs4JWI9xlVGM",
+    "sheetName": "BNI SAMUEL PARASIAN BRUTU",
+    "startRow": 4,
+    "active": true
+  },
+  {
+    "id": 5,
+    "name": "BNI MUHAMMAD SAHRI",
+    "spreadsheetId": "1p02wT0OaCFQ2Lfkgha0-TCNcIUvEYhHqs4JWI9xlVGM",
+    "sheetName": "BNI MUHAMMAD SAHRI",
+    "startRow": 4,
     "active": true
   }
 ]

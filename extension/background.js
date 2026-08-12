@@ -2,11 +2,10 @@
 // SIS4D EXTENSION BACKGROUND
 // =====================================
 
-const API_BASE = 'http://127.0.0.1:3001';
+const API_BASE = 'http://103.193.179.47';
 
 // helper request
-async function post(url, data){
-
+async function post(url, data) {
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -23,17 +22,14 @@ async function post(url, data){
 // =====================================
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
-  // -----------------------------------
-  // KIRIM TRANSAKSI KE SERVER
-  // -----------------------------------
-  if(message.type === 'SEND_TO_API'){
+  // kirim transaksi ke server
+  if (message.type === 'SEND_TO_API') {
 
     post(`${API_BASE}/api/logs`, message.data)
-      .then(result => {
-        sendResponse(result);
-      })
+      .then(result => sendResponse(result))
       .catch(err => {
         console.error('Gagal kirim transaksi:', err);
+
         sendResponse({
           success: false,
           error: err.message
@@ -43,17 +39,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // -----------------------------------
-  // KIRIM STATUS ADMIN ONLINE
-  // -----------------------------------
-  if(message.type === 'ADMIN_STATUS'){
+  // kirim status admin online
+  if (message.type === 'ADMIN_STATUS') {
 
     post(`${API_BASE}/api/admin-status`, message.data)
-      .then(result => {
-        sendResponse(result);
-      })
+      .then(result => sendResponse(result))
       .catch(err => {
         console.error('Gagal kirim status admin:', err);
+
         sendResponse({
           success: false,
           error: err.message
@@ -63,10 +56,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // -----------------------------------
-  // AMBIL DAFTAR BANK DARI SERVER
-  // -----------------------------------
-  if(message.type === 'GET_BANKS'){
+  // ambil daftar bank dari server
+  if (message.type === 'GET_BANKS') {
 
     fetch(`${API_BASE}/api/banks`)
       .then(res => res.json())
@@ -78,6 +69,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       })
       .catch(err => {
         console.error('Gagal ambil bank:', err);
+
         sendResponse({
           success: false,
           error: err.message,
