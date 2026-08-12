@@ -18,27 +18,26 @@ const sheets = google.sheets({
 const SPREADSHEET_ID =
   '1fZLzW-SEZ2LWmqIIfKr7LSxRbJLMoo8C8VJGJKSuhj8';
 
-// =========================
+// =====================================
 // Cari baris kosong pertama mulai B7
-// =========================
+// =====================================
 async function getNextRow(sheetName){
-    sheetName = typeof sheetName === 'object'
-  ? sheetName.name
-  : sheetName;
+
+  sheetName = typeof sheetName === 'object'
+    ? sheetName.name
+    : sheetName;
 
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${sheetName}!B7:B1000`
+    range: `'${sheetName}'!B4:B1000`
   });
 
   const rows = res.data.values || [];
 
-  // mulai dari baris 7
-  let row = 7;
+  let row = 4;
 
   for(const r of rows){
 
-    // kalau sel kosong -> pakai baris ini
     if(!r[0] || r[0].toString().trim() === ''){
       return row;
     }
@@ -46,17 +45,16 @@ async function getNextRow(sheetName){
     row++;
   }
 
-  // kalau semua terisi -> tambah di bawahnya
   return row;
 }
 
-// =========================
+// =====================================
 // Ambil nama rekening dari bank tujuan
 // contoh:
-// DANA - xxxxx8406 - Muhamad Zenal Ihwan
+// BCA - xxxxx7144 - PRAKITNO
 // hasil:
-// Muhamad Zenal Ihwan
-// =========================
+// PRAKITNO
+// =====================================
 function extractNama(bankTujuan){
 
   if(!bankTujuan) return '';
@@ -70,47 +68,108 @@ function extractNama(bankTujuan){
   return bankTujuan.trim();
 }
 
-// =========================
+// =====================================
+// HITUNG BIAYA ADMIN FINAL
+// =====================================
+function getAdminFee(bankAktif, bankTujuan){
+
+  const asal = (bankAktif || '')
+    .trim()
+    .toUpperCase();
+
+  const tujuan = (bankTujuan || '')
+    .split('-')[0]
+    .trim()
+    .toUpperCase();
+
+  // sesama bank gratis
+  if (asal === tujuan) {
+    return 0;
+  }
+
+  // ewallet gratis
+  if (tujuan === 'DANA') {
+    return 0;
+  }
+
+  if (tujuan === 'OVO') {
+    return 0;
+  }
+
+  // ewallet kena 1000
+  if (tujuan === 'GOPAY') {
+    return 1000;
+  }
+
+  if (tujuan === 'LINKAJA') {
+    return 1000;
+  }
+
+  // selain itu beda bank kena 2500
+  return 2500;
+}
+
+// =====================================
 // Tulis transaksi ke sheet
-// =========================
+// =====================================
 export async function appendToSheet(sheetName, item){
-    sheetName = typeof sheetName === 'object'
-  ? sheetName.name
-  : sheetName;
+
+  sheetName = typeof sheetName === 'object'
+    ? sheetName.name
+    : sheetName;
 
   const row = await getNextRow(sheetName);
 
-  const nama = item.atasNama || extractNama(item.bankTujuan);
+  const nama =
+    item.atasNama || extractNama(item.bankTujuan);
+
+  const biayaAdmin = getAdminFee(
+    item.bankAktif,
+    item.bankTujuan
+  );
+
+  const data = [
+
+    // TRANSAKSI UTAMA
+    {
+      range: `'${sheetName}'!B${row}`,
+      values: [[ nama ]]
+    },
+    {
+      range: `'${sheetName}'!C${row}`,
+      values: [[ item.nominal ]]
+    },
+    {
+      range: `'${sheetName}'!F${row}`,
+      values: [[ item.userId ]]
+    }
+
+  ];
+
+  // Kalau ada biaya admin -> tambah baris di bawahnya
+  if (biayaAdmin > 0) {
+
+    data.push(
+      {
+        range: `'${sheetName}'!B${row + 1}`,
+        values: [[ 'BIAYA TRANSFER' ]]
+      },
+      {
+        range: `'${sheetName}'!C${row + 1}`,
+        values: [[ biayaAdmin ]]
+      }
+    );
+  }
 
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: SPREADSHEET_ID,
     requestBody: {
       valueInputOption: 'USER_ENTERED',
-      data: [
-
-        // B = NAMA
-        {
-          range: `${sheetName}!B${row}`,
-          values: [[ nama ]]
-        },
-
-        // C = KELUAR
-        {
-          range: `${sheetName}!C${row}`,
-          values: [[ item.nominal ]]
-        },
-
-        // F = USER
-        {
-          range: `${sheetName}!F${row}`,
-          values: [[ item.userId ]]
-        }
-
-      ]
+      data
     }
   });
 
   console.log(
-    `Transaksi masuk ke ${sheetName} baris ${row}`
+    `Transaksi masuk ke ${sheetName} baris ${row} | biaya admin: ${biayaAdmin}`
   );
 }
