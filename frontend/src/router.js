@@ -8,15 +8,15 @@ import { BanksPage } from './pages/Banks.js';
 // API ENDPOINT
 // =========================
 const API = {
-  logs: 'https://103.193.179.47/api/logs',
-  admins: 'https://103.193.179.47/api/admin-status',
-  banks: 'https://103.193.179.47/api/banks'
+  logs: 'https://chips-bit-thread-oasis.trycloudflare.com/api/logs',
+  admins: 'https://chips-bit-thread-oasis.trycloudflare.com/api/admin-status',
+  banks: 'https://chips-bit-thread-oasis.trycloudflare.com/api/banks'
 };
 
 // =========================
 // SOCKET
 // =========================
-const socket = io('https://103.193.179.47', {
+const socket = io('https://chips-bit-thread-oasis.trycloudflare.com', {
   transports: ['websocket']
 });
 

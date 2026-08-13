@@ -1,4 +1,4 @@
-const API_BASE = 'https://103.193.179.47/api';
+const API_BASE = 'https://chips-bit-thread-oasis.trycloudflare.com/api';
 
 // =========================
 // LOGS
