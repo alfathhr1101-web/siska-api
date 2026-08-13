@@ -272,7 +272,7 @@ function bindBankActions(banks){
     nameInput.value = '';
     spreadsheetInput.value = '';
     sheetInput.value = '';
-    rowInput.value = 7;
+    rowInput.value = 4;
 
     modal.classList.remove('hidden');
   };
@@ -300,7 +300,7 @@ function bindBankActions(banks){
       nameInput.value = bank.name || '';
       spreadsheetInput.value = bank.spreadsheetId || '';
       sheetInput.value = bank.sheetName || '';
-      rowInput.value = bank.startRow || 7;
+      rowInput.value = bank.startRow || 4;
 
       modal.classList.remove('hidden');
     };
