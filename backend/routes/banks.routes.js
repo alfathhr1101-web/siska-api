@@ -28,7 +28,7 @@ router.post('/', (req, res) => {
     name: req.body.name,
     spreadsheetId: req.body.spreadsheetId,
     sheetName: req.body.sheetName,
-    startRow: Number(req.body.startRow || 7),
+    startRow: Number(req.body.startRow || 4),
     active: true
   };
 

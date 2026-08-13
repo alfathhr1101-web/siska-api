@@ -19,7 +19,7 @@ const SPREADSHEET_ID =
   '1fZLzW-SEZ2LWmqIIfKr7LSxRbJLMoo8C8VJGJKSuhj8';
 
 // =====================================
-// Cari baris kosong pertama mulai B7
+// Cari baris kosong pertama mulai B4
 // =====================================
 async function getNextRow(sheetName){
 
@@ -29,12 +29,12 @@ async function getNextRow(sheetName){
 
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `'${sheetName}'!B7:B1000`
+    range: `'${sheetName}'!B4:B1000`
   });
 
   const rows = res.data.values || [];
 
-  let row = 7;
+  let row = 4;
 
   for(const r of rows){
 
