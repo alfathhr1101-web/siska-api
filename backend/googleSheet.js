@@ -71,16 +71,28 @@ function extractNama(bankTujuan){
 // =====================================
 // HITUNG BIAYA ADMIN
 // =====================================
+function normalizeBank(text = '') {
+  const t = text.toUpperCase();
+
+  if (t.includes('BCA')) return 'BCA';
+  if (t.includes('BNI')) return 'BNI';
+  if (t.includes('BRI')) return 'BRI';
+  if (t.includes('MANDIRI')) return 'MANDIRI';
+  if (t.includes('DANA')) return 'DANA';
+  if (t.includes('OVO')) return 'OVO';
+  if (t.includes('GOPAY')) return 'GOPAY';
+  if (t.includes('LINKAJA')) return 'LINKAJA';
+
+  return t.trim();
+}
+
 function getAdminFee(bankAktif, bankTujuan){
 
-  const asal = (bankAktif || '')
-    .trim()
-    .toUpperCase();
+  const asal = normalizeBank(bankAktif);
 
-  const tujuan = (bankTujuan || '')
-    .split('-')[0]
-    .trim()
-    .toUpperCase();
+  const tujuan = normalizeBank(
+    (bankTujuan || '').split('-')[0]
+  );
 
   // sesama bank gratis
   if (asal === tujuan) {
@@ -88,14 +100,12 @@ function getAdminFee(bankAktif, bankTujuan){
   }
 
   // ewallet gratis
-  if (tujuan === 'DANA') return 0;
-  if (tujuan === 'OVO') return 0;
+  if (tujuan === 'DANA' || tujuan === 'OVO') return 0;
 
-  // ewallet kena 1000
-  if (tujuan === 'GOPAY') return 1000;
-  if (tujuan === 'LINKAJA') return 1000;
+  // ewallet tertentu kena 1000
+  if (tujuan === 'GOPAY' || tujuan === 'LINKAJA') return 1000;
 
-  // selain itu beda bank kena 2500
+  // selain itu beda bank
   return 2500;
 }
 
