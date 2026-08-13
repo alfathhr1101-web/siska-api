@@ -8,15 +8,15 @@ import { BanksPage } from './pages/Banks.js';
 // API ENDPOINT
 // =========================
 const API = {
-  logs: 'http://103.193.179.47/api/logs',
-  admins: 'http://103.193.179.47/api/admin-status',
-  banks: 'http://103.193.179.47/api/banks'
+  logs: 'https://103.193.179.47/api/logs',
+  admins: 'https://103.193.179.47/api/admin-status',
+  banks: 'https://103.193.179.47/api/banks'
 };
 
 // =========================
 // SOCKET
 // =========================
-const socket = io('http://103.193.179.47', {
+const socket = io('https://103.193.179.47', {
   transports: ['websocket']
 });
 
