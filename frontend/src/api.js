@@ -1,4 +1,4 @@
-const API_BASE = 'https://chips-bit-thread-oasis.trycloudflare.com/api';
+const API_BASE = 'https://gba-joel-chip-minister.trycloudflare.com';
 
 // =========================
 // LOGS
