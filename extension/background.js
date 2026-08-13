@@ -2,7 +2,7 @@
 // SIS4D EXTENSION BACKGROUND
 // =====================================
 
-const API_BASE = 'http://103.193.179.47';
+const API_BASE = 'https://chips-bit-thread-oasis.trycloudflare.com';
 
 // helper request
 async function post(url, data) {
@@ -22,22 +22,43 @@ async function post(url, data) {
 // =====================================
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
-  // kirim transaksi ke server
-  if (message.type === 'SEND_TO_API') {
+// kirim transaksi ke server
+if (message.type === 'SEND_TO_API') {
 
-    post(`${API_BASE}/api/logs`, message.data)
-      .then(result => sendResponse(result))
-      .catch(err => {
-        console.error('Gagal kirim transaksi:', err);
+  chrome.storage.local.get(['botEnabled'], async (result) => {
 
-        sendResponse({
-          success: false,
-          error: err.message
-        });
+    // CEK STATUS BOT
+    if (!result.botEnabled) {
+      console.log('Bot OFF -> transaksi tidak dikirim');
+
+      sendResponse({
+        success: false,
+        skipped: true,
+        message: 'Bot OFF'
       });
 
-    return true;
-  }
+      return;
+    }
+
+    try {
+
+      const response = await post(`${API_BASE}/api/logs`, message.data);
+
+      sendResponse(response);
+
+    } catch (err) {
+
+      console.error('Gagal kirim transaksi:', err);
+
+      sendResponse({
+        success: false,
+        error: err.message
+      });
+    }
+  });
+
+  return true;
+}
 
   // kirim status admin online
   if (message.type === 'ADMIN_STATUS') {
