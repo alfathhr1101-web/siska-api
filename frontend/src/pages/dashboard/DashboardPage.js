@@ -1,7 +1,7 @@
 // =====================================
 // HITUNG BIAYA ADMIN UNTUK DASHBOARD
 // =====================================
-function getBiayaAdmin(admin, bankTujuan){
+function getBiayaAdmin(admin, bankTujuan) {
 
   const tujuan = (bankTujuan || '')
     .split('-')[0]
@@ -22,12 +22,10 @@ function getBiayaAdmin(admin, bankTujuan){
   if (asal === tujuan) return 0;
 
   // ewallet gratis
-  if (tujuan === 'DANA') return 0;
-  if (tujuan === 'OVO') return 0;
+  if (tujuan === 'DANA' || tujuan === 'OVO') return 0;
 
-  // ewallet kena 1000
-  if (tujuan === 'GOPAY') return 1000;
-  if (tujuan === 'LINKAJA') return 1000;
+  // ewallet tertentu kena 1000
+  if (tujuan === 'GOPAY' || tujuan === 'LINKAJA') return 1000;
 
   // beda bank kena 2500
   return 2500;
@@ -36,14 +34,14 @@ function getBiayaAdmin(admin, bankTujuan){
 // =====================================
 // FORMAT RUPIAH
 // =====================================
-function rupiah(n){
+function rupiah(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 }
 
 // =====================================
 // HALAMAN DASHBOARD
 // =====================================
-export function DashboardPage(data = []){
+export function DashboardPage(data = []) {
 
   const rows = data.map((item, i) => {
 

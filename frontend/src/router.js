@@ -1,35 +1,165 @@
 import { io } from 'socket.io-client';
 
-import { DashboardPage } from './pages/Dashboard.js';
-import { AdminsPage } from './pages/Admins.js';
-import { BanksPage } from './pages/Banks.js';
+// =========================
+// GLOBAL CSS
+// =========================
+import './styles/app.css';
+import './styles/layout.css';
+import './styles/sidebar.css';
+import './styles/navbar.css';
+import './styles/cards.css';
+import './styles/table.css';
+import './styles/auth.css';
+
+// =========================
+// PAGES
+// =========================
+import { LoginPage, bindLogin } from './pages/auth/LoginPage.js';
+import { DashboardPage } from './pages/dashboard/DashboardPage.js';
+import { AdminsPage } from './pages/dashboard/AdminsPage.js';
+import { BanksPage } from './pages/dashboard/BanksPage.js';
 
 // =========================
 // API ENDPOINT
 // =========================
 const API = {
-  logs: 'https://gba-joel-chip-minister.trycloudflare.com/api/logs',
-  admins: 'https://gba-joel-chip-minister.trycloudflare.com/api/admin-status',
-  banks: 'https://gba-joel-chip-minister.trycloudflare.com/api/banks'
+  logs: 'https://api.botwdsis4d.com/api/logs',
+  admins: 'https://api.botwdsis4d.com/api/admin-status',
+  banks: 'https://api.botwdsis4d.com/api/banks'
 };
 
 // =========================
-// SOCKET
+// SOCKET REALTIME
 // =========================
-const socket = io('https://gba-joel-chip-minister.trycloudflare.com', {
+const socket = io('https://api.botwdsis4d.com', {
   transports: ['websocket']
 });
 
+// =========================
+// ROOT ELEMENT
+// =========================
 const app = document.getElementById('app');
-let adminStatusMap = {};
+const sidebar = document.getElementById('sidebar');
+const navbar = document.getElementById('navbar');
+
+// =========================
+// AUTH HELPERS
+// =========================
+function isLoggedIn() {
+  return localStorage.getItem('operator_login') === '1';
+}
+
+function getOperatorName() {
+  return localStorage.getItem('sis4d_operator') || 'operator';
+}
+
+// =========================
+// LOGOUT GLOBAL
+// =========================
+window.logout = function () {
+
+  localStorage.removeItem('operator_login');
+  localStorage.removeItem('sis4d_operator');
+
+  location.hash = '#login';
+  render();
+};
+
+// =========================
+// SIDEBAR TEMPLATE
+// =========================
+function renderSidebar() {
+
+  sidebar.innerHTML = `
+    <div class="sidebar-header">
+      <div class="sidebar-logo">S</div>
+      <div>
+        <h2>SIS4D</h2>
+        <p>Operator Panel</p>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+
+      <a href="#dashboard" class="nav-item" data-page="dashboard">
+        📊 Dashboard
+      </a>
+
+      <a href="#admins" class="nav-item" data-page="admins">
+        👤 Admin Online
+      </a>
+
+      <a href="#banks" class="nav-item" data-page="banks">
+        🏦 Bank Master
+      </a>
+
+    </nav>
+  `;
+}
+
+// =========================
+// NAVBAR TEMPLATE
+// =========================
+function renderNavbar() {
+
+  navbar.innerHTML = `
+    <div class="topbar">
+
+      <div>
+        <h1>SIS4D Operator Panel</h1>
+        <small>Login sebagai: ${getOperatorName()}</small>
+      </div>
+
+      <div style="display:flex;gap:12px">
+        <button id="refreshBtn" class="refresh-btn">
+          Refresh
+        </button>
+
+        <button onclick="logout()" class="secondary-btn">
+          Logout
+        </button>
+      </div>
+
+    </div>
+  `;
+
+document.getElementById('refreshBtn')?.addEventListener('click', async () => {
+  await render();
+});
+}
+
 // =========================
 // ROUTER
 // =========================
-async function render(){
+async function render() {
 
-  const hash = location.hash || '#dashboard';
+  const hash = location.hash || '#login';
 
-  switch(hash){
+  // belum login
+  if (!isLoggedIn()) {
+
+    sidebar.style.display = 'none';
+    navbar.style.display = 'none';
+
+    app.innerHTML = LoginPage();
+    bindLogin();
+
+    return;
+  }
+
+  // sudah login tapi buka #login
+  if (hash === '#login') {
+    location.hash = '#dashboard';
+    return;
+  }
+
+  sidebar.style.display = 'block';
+  navbar.style.display = 'block';
+
+  renderSidebar();
+  renderNavbar();
+
+  switch (hash) {
 
     case '#admins':
       app.innerHTML = AdminsPage();
@@ -41,17 +171,20 @@ async function render(){
       await loadBanks();
       break;
 
+    case '#dashboard':
     default:
-  await loadAdmins();
-  app.innerHTML = DashboardPage();
-  await loadLogs();
-  break;
+      app.innerHTML = DashboardPage();
+      await loadLogs();
+      break;
   }
 
-  setActive(hash.replace('#',''));
+  setActive(hash.replace('#', ''));
 }
 
-function setActive(page){
+// =========================
+// ACTIVE MENU
+// =========================
+function setActive(page) {
 
   document.querySelectorAll('[data-page]')
     .forEach(el => el.classList.remove('active'));
@@ -60,106 +193,38 @@ function setActive(page){
     ?.classList.add('active');
 }
 
-function normalizeBank(text = '') {
-  const t = text.toUpperCase();
-
-  if (t.includes('BCA')) return 'BCA';
-  if (t.includes('BNI')) return 'BNI';
-  if (t.includes('BRI')) return 'BRI';
-  if (t.includes('MANDIRI')) return 'MANDIRI';
-  if (t.includes('DANA')) return 'DANA';
-  if (t.includes('OVO')) return 'OVO';
-  if (t.includes('GOPAY')) return 'GOPAY';
-  if (t.includes('LINKAJA')) return 'LINKAJA';
-
-  return t.trim();
-}
-
-function getBiayaAdmin(admin, bankTujuan){
-
-  const asal = normalizeBank(
-    adminStatusMap[(admin || '').toLowerCase()] || ''
-  );
-
-  const tujuan = normalizeBank(
-    (bankTujuan || '').split('-')[0]
-  );
-
-  // sesama bank gratis
-  if (asal === tujuan) return 0;
-
-  // ewallet gratis
-  if (tujuan === 'DANA' || tujuan === 'OVO') return 0;
-
-  // ewallet tertentu kena 1000
-  if (tujuan === 'GOPAY' || tujuan === 'LINKAJA') return 1000;
-
-  // selain itu beda bank
-  return 2500;
-}
-
-// =========================
-// HITUNG BIAYA ADMIN
-// =========================
-function getAdminFee(item) {
-
-  const tujuan = (item.bankTujuan || '')
-    .split('-')[0]
-    .trim()
-    .toUpperCase();
-
-  const bankAdmin = (item.bankAktif || '')
-    .trim()
-    .toUpperCase();
-
-  // sesama bank gratis
-  if (tujuan === bankAdmin) {
-    return 0;
-  }
-
-  // beda bank kena biaya transfer
-  return 2500;
-}
-
 // =========================
 // LOAD LOGS
 // =========================
-async function loadLogs(){
+async function loadLogs() {
 
-  try{
+  try {
 
     const res = await fetch(API.logs);
     const data = await res.json();
 
     renderLogTable(data);
 
-  }catch(err){
+  } catch (err) {
 
     console.error('Gagal load logs:', err);
   }
 }
 
-function renderLogTable(data){
+function renderLogTable(data = []) {
 
   const body = document.getElementById('dataBody');
 
   if (!body) return;
 
-  body.innerHTML = data.map((x,i)=>`
+  body.innerHTML = data.map((x, i) => `
     <tr>
-      <td>${i+1}</td>
+      <td>${i + 1}</td>
       <td>${x.tanggal || '-'}</td>
       <td>${x.username || '-'}</td>
       <td>${x.bankTujuan || '-'}</td>
-
-      <td>
-        Rp ${Number(x.nominal || 0).toLocaleString('id-ID')}
-      </td>
-
-      <td style="color:#f59e0b;font-weight:700">
-        Rp ${getBiayaAdmin(x.admin, x.bankTujuan).toLocaleString('id-ID')}
-      </td>
-
+      <td>Rp ${Number(x.nominal || 0).toLocaleString('id-ID')}</td>
+      <td style="color:#f59e0b;font-weight:700">Rp 2.500</td>
       <td>${x.admin || '-'}</td>
     </tr>
   `).join('');
@@ -168,55 +233,47 @@ function renderLogTable(data){
 // =========================
 // LOAD ADMINS
 // =========================
-async function loadAdmins(){
+async function loadAdmins() {
 
-  try{
+  try {
 
     const res = await fetch(API.admins);
     const data = await res.json();
-    adminStatusMap = {};
-
-data.forEach(x => {
-  adminStatusMap[
-    (x.admin || '').toLowerCase()
-  ] = x.activeBank || '';
-});
-
-    // simpan mapping admin -> bank aktif
-    adminStatusMap = {};
-
-    data.forEach(x => {
-      adminStatusMap[
-        (x.admin || '').toLowerCase()
-      ] = x.activeBank || '';
-    });
 
     const body = document.getElementById('adminBody');
 
     if (!body) return;
 
-    body.innerHTML = data.map(x=>`
+    body.innerHTML = data.map(x => `
       <tr>
-        <td>${x.botEnabled ? '🟢 Online' : '🔴 Bot Off'}</td>
+        <td>
+          ${x.botEnabled ? '🟢 Online' : '🔴 Bot Off'}
+        </td>
+
         <td>${x.admin}</td>
+
         <td>${x.activeBank || '-'}</td>
-        <td>${new Date(x.lastSeen).toLocaleTimeString('id-ID')}</td>
+
+        <td>
+          ${x.lastSeen
+            ? new Date(x.lastSeen).toLocaleTimeString('id-ID')
+            : '-'}
+        </td>
       </tr>
     `).join('');
 
-  }catch(err){
+  } catch (err) {
 
     console.error('Gagal load admins:', err);
-
   }
 }
 
 // =========================
 // LOAD BANKS
 // =========================
-async function loadBanks(){
+async function loadBanks() {
 
-  try{
+  try {
 
     const res = await fetch(API.banks);
     const data = await res.json();
@@ -225,246 +282,49 @@ async function loadBanks(){
 
     if (!body) return;
 
-    body.innerHTML = data.map(x=>`
+    body.innerHTML = data.map(x => `
       <tr>
         <td><strong>${x.name}</strong></td>
         <td>${x.sheetName}</td>
         <td>${x.startRow}</td>
         <td>${x.active ? '🟢 Aktif' : '⚫ Nonaktif'}</td>
-        <td style="display:flex;gap:8px">
-          <button class="table-btn edit-bank" data-id="${x.id}">
-            Edit
-          </button>
-
-          <button class="table-btn danger delete-bank" data-id="${x.id}">
-            Hapus
-          </button>
-        </td>
       </tr>
     `).join('');
 
-    bindBankActions(data);
-
-  }catch(err){
+  } catch (err) {
 
     console.error('Gagal load banks:', err);
   }
 }
 
 // =========================
-// BANK ACTIONS
-// =========================
-let editingBankId = null;
-
-function bindBankActions(banks){
-
-  const modal = document.getElementById('bankModal');
-
-  const title = document.getElementById('bankModalTitle');
-
-  const nameInput = document.getElementById('bankName');
-
-  const spreadsheetInput = document.getElementById('bankSpreadsheet');
-
-  const sheetInput = document.getElementById('bankSheet');
-
-  const rowInput = document.getElementById('bankStartRow');
-
-  const saveBtn = document.getElementById('saveBankBtn');
-
-  // buka tambah
-  document.getElementById('addBankBtn').onclick = () => {
-
-    editingBankId = null;
-
-    title.textContent = 'Tambah Bank';
-
-    nameInput.value = '';
-    spreadsheetInput.value = '';
-    sheetInput.value = '';
-    rowInput.value = 4;
-
-    modal.classList.remove('hidden');
-  };
-
-  // tutup modal
-  document.getElementById('closeBankModal').onclick =
-    () => modal.classList.add('hidden');
-
-  document.getElementById('cancelBankModal').onclick =
-    () => modal.classList.add('hidden');
-
-  // edit
-  document.querySelectorAll('.edit-bank').forEach(btn => {
-
-    btn.onclick = () => {
-
-      const bank = banks.find(
-        b => String(b.id) === btn.dataset.id
-      );
-
-      editingBankId = bank.id;
-
-      title.textContent = 'Edit Bank';
-
-      nameInput.value = bank.name || '';
-      spreadsheetInput.value = bank.spreadsheetId || '';
-      sheetInput.value = bank.sheetName || '';
-      rowInput.value = bank.startRow || 4;
-
-      modal.classList.remove('hidden');
-    };
-  });
-
-  // hapus
-  document.querySelectorAll('.delete-bank').forEach(btn => {
-
-    btn.onclick = async () => {
-
-      if(!confirm('Hapus bank ini?')) return;
-
-      await fetch(`${API.banks}/${btn.dataset.id}`, {
-        method:'DELETE'
-      });
-
-      loadBanks();
-    };
-  });
-
-  // simpan
-  saveBtn.onclick = async () => {
-
-    const payload = {
-      name: nameInput.value.trim(),
-      spreadsheetId: spreadsheetInput.value.trim(),
-      sheetName: sheetInput.value.trim(),
-      startRow: Number(rowInput.value || 4)
-    };
-
-    if(!payload.name){
-      alert('Nama bank wajib diisi');
-      return;
-    }
-
-    if(editingBankId){
-
-      await fetch(`${API.banks}/${editingBankId}`, {
-        method:'PUT',
-        headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-    }else{
-
-      await fetch(API.banks, {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify(payload)
-      });
-    }
-
-    modal.classList.add('hidden');
-
-    loadBanks();
-  };
-}
-
-// =========================
-// REALTIME SOCKET
+// REALTIME SOCKET EVENTS
 // =========================
 socket.on('connect', () => {
   console.log('🟢 realtime connected');
 });
 
-// transaksi baru
-socket.on('new-log', (item) => {
-
-  if (
-    location.hash !== '#dashboard' &&
-    location.hash !== ''
-  ) return;
-
-  const body = document.getElementById('dataBody');
-
-  if (!body) return;
-
-  const fee = getAdminFee(item);
-
-  const row = `
-    <tr>
-      <td>1</td>
-      <td>${item.tanggal}</td>
-      <td>${item.username}</td>
-      <td>${item.bankTujuan}</td>
-      <td>Rp ${Number(item.nominal).toLocaleString('id-ID')}</td>
-      <td style="color:${fee ? '#ffb020' : '#7cff8f'};font-weight:600">
-        ${fee ? 'Rp ' + fee.toLocaleString('id-ID') : 'Gratis'}
-      </td>
-      <td>${item.admin}</td>
-    </tr>
-  `;
-
-  body.insertAdjacentHTML('afterbegin', row);
-
-  while (body.rows.length > 40) {
-    body.deleteRow(body.rows.length - 1);
-  }
-
-  [...body.rows].forEach((r,i)=>{
-    r.cells[0].textContent = i + 1;
-  });
+socket.on('disconnect', () => {
+  console.log('🔴 realtime disconnected');
 });
 
-// update KPI
-socket.on('stats-update', (stats) => {
-
-  const total = document.getElementById('totalCount');
-  const success = document.getElementById('successCount');
-
-  if (total) total.textContent = stats.total;
-  if (success) success.textContent = stats.success;
-});
-
-// update admin online
-socket.on('admin-update', () => {
-
-  if (location.hash === '#admins') {
-    loadAdmins();
-  }
-});
-
-// logs clear
-socket.on('logs-cleared', () => {
-
-  if (
-    location.hash === '#dashboard' ||
-    location.hash === ''
-  ) {
-
-    const body = document.getElementById('dataBody');
-
-    if (body) body.innerHTML = '';
-
-    const total = document.getElementById('totalCount');
-    const success = document.getElementById('successCount');
-
-    if (total) total.textContent = 0;
-    if (success) success.textContent = 0;
+// optional realtime refresh
+socket.on('log:new', () => {
+  if (location.hash === '#dashboard') {
+    loadLogs();
   }
 });
 
 // =========================
-// REFRESH BUTTON
-// =========================
-document.addEventListener('click', async (e) => {
-
-  if (e.target.id === 'refreshBtn') {
-    await render();
-  }
-});
-
-// =========================
-// START
+// START APP
 // =========================
 window.addEventListener('hashchange', render);
-window.addEventListener('DOMContentLoaded', render);
+
+window.addEventListener('DOMContentLoaded', () => {
+
+  if (!location.hash) {
+    location.hash = isLoggedIn() ? '#dashboard' : '#login';
+  } else {
+    render();
+  }
+});

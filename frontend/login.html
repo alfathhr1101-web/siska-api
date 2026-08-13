@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login Operator SIS4D</title>
+  <style>
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Arial,sans-serif;
+      background:linear-gradient(135deg,#020617,#0f172a,#111827);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#fff;
+    }
+    .card{
+      width:100%;
+      max-width:380px;
+      background:#111827;
+      padding:36px 30px;
+      border-radius:24px;
+      box-shadow:0 20px 50px rgba(0,0,0,.45);
+    }
+    h1{text-align:center;margin:0 0 10px}
+    p{text-align:center;color:#94a3b8;margin:0 0 24px}
+    input{
+      width:100%;
+      padding:14px;
+      margin-bottom:14px;
+      border:none;
+      border-radius:12px;
+      background:#1f2937;
+      color:#fff;
+      font-size:15px;
+    }
+    button{
+      width:100%;
+      padding:14px;
+      border:none;
+      border-radius:12px;
+      background:#2563eb;
+      color:#fff;
+      font-weight:700;
+      cursor:pointer;
+      font-size:15px;
+    }
+    button:hover{background:#1d4ed8}
+    .footer{
+      text-align:center;
+      margin-top:18px;
+      color:#64748b;
+      font-size:12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>SIS4D Operator</h1>
+    <p>Masuk ke dashboard operator</p>
+
+    <input id="username" type="text" placeholder="Username" />
+    <input id="password" type="password" placeholder="Password" />
+
+    <button id="loginBtn">Masuk</button>
+
+    <div class="footer">© 2026 SIS4D Control Center</div>
+  </div>
+
+<script>
+  document.getElementById('loginBtn').onclick = () => {
+    const u = document.getElementById('username').value.trim();
+    const p = document.getElementById('password').value.trim();
+
+    if (u === 'operator' && p === 'sis4d123') {
+
+      // simpan session login
+      localStorage.setItem('operator_login', '1');
+
+      // simpan nama operator
+      localStorage.setItem('sis4d_operator', u);
+
+      // arahkan ke dashboard SPA
+      window.location.href = '/#dashboard';
+
+    } else {
+      alert('Username atau password salah');
+    }
+  };
+</script>
+</body>
+</html> 

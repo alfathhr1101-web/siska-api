@@ -1,26 +1,138 @@
+/* =========================================
+   TOPBAR
+========================================= */
+
 .topbar{
   display:flex;
-  justify-content:space-between;
   align-items:center;
+  justify-content:space-between;
   gap:20px;
+
+  padding:18px 22px;
+  margin-bottom:24px;
+
+  background:rgba(7,24,77,.92);
+  border:1px solid rgba(59,130,246,.14);
+  border-radius:20px;
+
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+  backdrop-filter:blur(8px);
 }
 
+
+/* =========================================
+   TITLE
+========================================= */
+
+.topbar-title h1,
 .topbar h1{
   margin:0;
   font-size:32px;
+  font-weight:800;
+  letter-spacing:-.03em;
+  color:#fff;
 }
 
+.topbar-title small,
 .topbar small{
   display:block;
-  margin-top:4px;
+  margin-top:6px;
   color:#9fb3ff;
+  font-size:13px;
+  font-weight:500;
 }
 
+
+/* =========================================
+   ACTIONS
+========================================= */
+
+.topbar-actions{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+
+/* =========================================
+   BUTTON BASE
+========================================= */
+
+.topbar-btn,
 #refreshBtn{
   border:none;
-  padding:10px 18px;
   border-radius:12px;
+  padding:10px 18px;
+
+  font-size:14px;
+  font-weight:700;
+
+  cursor:pointer;
+  transition:all .18s ease;
+}
+
+
+/* primary */
+
+#refreshBtn,
+.topbar-btn.primary{
   background:#2563eb;
   color:#fff;
-  font-weight:600;
+}
+
+#refreshBtn:hover,
+.topbar-btn.primary:hover{
+  background:#1d4ed8;
+  transform:translateY(-1px);
+}
+
+
+/* danger */
+
+.topbar-btn.danger{
+  background:#ef4444;
+  color:#fff;
+}
+
+.topbar-btn.danger:hover{
+  background:#dc2626;
+  transform:translateY(-1px);
+}
+
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width:768px){
+
+  .topbar{
+    flex-direction:column;
+    align-items:flex-start;
+    padding:18px;
+  }
+
+  .topbar-title h1,
+  .topbar h1{
+    font-size:26px;
+  }
+
+  .topbar-actions{
+    width:100%;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+
+  .topbar-btn,
+  #refreshBtn{
+    width:100%;
+    text-align:center;
+  }
+}
+
+@media (max-width:480px){
+
+  .topbar-actions{
+    grid-template-columns:1fr;
+  }
 }
