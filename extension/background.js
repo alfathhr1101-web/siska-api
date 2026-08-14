@@ -2,7 +2,7 @@
 // SIS4D EXTENSION BACKGROUND
 // =====================================
 
-const API_BASE = 'https://gba-joel-chip-minister.trycloudflare.com';
+const API_BASE = 'https://api.botwdsis4d.com';
 
 // helper request
 async function post(url, data) {
