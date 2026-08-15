@@ -94,26 +94,25 @@ function getAdminFee(bankAktif, bankTujuan){
     (bankTujuan || '').split('-')[0]
   );
 
-  // sesama bank gratis
   if (asal === tujuan) {
     return 0;
   }
 
-  // ewallet gratis
   if (tujuan === 'DANA' || tujuan === 'OVO') return 0;
 
-  // ewallet tertentu kena 1000
   if (tujuan === 'GOPAY' || tujuan === 'LINKAJA') return 1000;
 
-  // selain itu beda bank
   return 2500;
 }
 
 // =====================================
 // Tulis transaksi ke sheet
 // =====================================
-export async function appendToSheet(sheetName, item){
-
+export async function appendToSheet(sheetName, item, bankAktif){
+  console.log('RAW DATA:', {
+    bankAktif,
+    bankTujuan: item.bankTujuan
+  });
   sheetName = typeof sheetName === 'object'
     ? sheetName.name
     : sheetName;
@@ -123,10 +122,10 @@ export async function appendToSheet(sheetName, item){
   const nama =
     item.atasNama || extractNama(item.bankTujuan);
 
-  const biayaAdmin = getAdminFee(
-    item.bankAktif,
-    item.bankTujuan
-  );
+const biayaAdmin = getAdminFee(
+  bankAktif,
+  item.bankTujuan
+);
 
   const data = [
 
