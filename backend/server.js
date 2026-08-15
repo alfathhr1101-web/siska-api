@@ -10,7 +10,10 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: '*'
+    origin: [
+    'https://botwdsis4d.com',
+    'https://www.botwdsis4d.com'
+  ]
   }
 });
 
@@ -170,6 +173,7 @@ app.post('/api/logs', async (req, res) => {
 
       bankTujuan: req.body.bankTujuan || '',
       bankAsal: req.body.bankAsal || '',
+      bankAktif: req.body.bankAktif || '',
 
       note: req.body.note || '',
 
@@ -234,23 +238,27 @@ app.post('/api/logs', async (req, res) => {
       const adminInfo = adminStatus[item.admin];
       const bankName = adminInfo?.activeBank || '';
 
-      if (bankName) {
+if (bankName) {
 
-        appendToSheet(bankName, item)
-          .then(() => {
+  appendToSheet(
+    bankName,
+    item,
+    bankName
+  )
+    .then(() => {
 
-            console.log(
-              `[${nowTime()}] [SHEET OK] ${bankName}`
-            );
+      console.log(
+        `[${nowTime()}] [SHEET OK] ${bankName}`
+      );
 
-          })
-          .catch(err => {
+    })
+    .catch(err => {
 
-            console.error(
-              `[${nowTime()}] [SHEET ERROR] ${err.message}`
-            );
-          });
-      }
+      console.error(
+        `[${nowTime()}] [SHEET ERROR] ${err.message}`
+      );
+    });
+}
 
     } catch (err) {
 
