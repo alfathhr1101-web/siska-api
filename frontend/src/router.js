@@ -302,15 +302,15 @@ async function loadBanks() {
 // =========================
 
 socket.on('connect', () => {
-  console.log('🟢 realtime connected');
+  // realtime connected
 });
 
-socket.on('disconnect', (reason) => {
-  console.log('🔴 realtime disconnected:', reason);
+socket.on('disconnect', () => {
+  // realtime disconnected
 });
 
-socket.on('connect_error', (err) => {
-  console.error('❌ Socket connection error:', err.message);
+socket.on('connect_error', () => {
+  // socket error handled silently
 });
 
 // =========================
@@ -318,11 +318,6 @@ socket.on('connect_error', (err) => {
 // =========================
 
 socket.on('init-data', ({ logs = [], stats = {} }) => {
-
-  console.log('📦 init-data diterima:', {
-    logs: logs.length,
-    stats
-  });
 
   if (location.hash !== '#dashboard') return;
 
@@ -345,8 +340,6 @@ socket.on('init-data', ({ logs = [], stats = {} }) => {
 // =========================
 
 socket.on('new-log', (item) => {
-
-  console.log('📥 NEW TRANSACTION:', item);
 
   if (location.hash !== '#dashboard') return;
 
@@ -387,8 +380,6 @@ socket.on('new-log', (item) => {
 
 socket.on('stats-update', (stats = {}) => {
 
-  console.log('📊 STATS UPDATE:', stats);
-
   const success = document.getElementById('successCount');
   const total = document.getElementById('totalCount');
 
@@ -407,8 +398,6 @@ socket.on('stats-update', (stats = {}) => {
 
 socket.on('admin-update', () => {
 
-  console.log('👤 ADMIN STATUS UPDATE');
-
   if (location.hash === '#admins') {
     loadAdmins();
   }
@@ -419,8 +408,6 @@ socket.on('admin-update', () => {
 // =========================
 
 socket.on('logs-cleared', () => {
-
-  console.log('🗑️ LOGS CLEARED');
 
   const body = document.getElementById('dataBody');
 
