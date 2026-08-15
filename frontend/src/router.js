@@ -300,19 +300,139 @@ async function loadBanks() {
 // =========================
 // REALTIME SOCKET EVENTS
 // =========================
+
 socket.on('connect', () => {
   console.log('🟢 realtime connected');
 });
 
-socket.on('disconnect', () => {
-  console.log('🔴 realtime disconnected');
+socket.on('disconnect', (reason) => {
+  console.log('🔴 realtime disconnected:', reason);
 });
 
-// optional realtime refresh
-socket.on('log:new', () => {
-  if (location.hash === '#dashboard') {
-    loadLogs();
+socket.on('connect_error', (err) => {
+  console.error('❌ Socket connection error:', err.message);
+});
+
+// =========================
+// DATA AWAL SAAT SOCKET CONNECT
+// =========================
+
+socket.on('init-data', ({ logs = [], stats = {} }) => {
+
+  console.log('📦 init-data diterima:', {
+    logs: logs.length,
+    stats
+  });
+
+  if (location.hash !== '#dashboard') return;
+
+  renderLogTable(logs);
+
+  const success = document.getElementById('successCount');
+  const total = document.getElementById('totalCount');
+
+  if (success) {
+    success.textContent = stats.success ?? 0;
   }
+
+  if (total) {
+    total.textContent = stats.total ?? 0;
+  }
+});
+
+// =========================
+// TRANSAKSI BARU
+// =========================
+
+socket.on('new-log', (item) => {
+
+  console.log('📥 NEW TRANSACTION:', item);
+
+  if (location.hash !== '#dashboard') return;
+
+  const body = document.getElementById('dataBody');
+
+  if (!body) {
+    loadLogs();
+    return;
+  }
+
+  const row = document.createElement('tr');
+
+  row.innerHTML = `
+    <td>NEW</td>
+    <td>${item.tanggal || '-'}</td>
+    <td>${item.username || '-'}</td>
+    <td>${item.bankTujuan || '-'}</td>
+    <td>
+      Rp ${Number(item.nominal || 0).toLocaleString('id-ID')}
+    </td>
+    <td style="color:#f59e0b;font-weight:700">
+      Rp 2.500
+    </td>
+    <td>${item.admin || '-'}</td>
+  `;
+
+  body.prepend(row);
+
+  // batasi tabel realtime supaya tidak membesar terus
+  while (body.children.length > 40) {
+    body.removeChild(body.lastElementChild);
+  }
+});
+
+// =========================
+// UPDATE STATISTIK
+// =========================
+
+socket.on('stats-update', (stats = {}) => {
+
+  console.log('📊 STATS UPDATE:', stats);
+
+  const success = document.getElementById('successCount');
+  const total = document.getElementById('totalCount');
+
+  if (success) {
+    success.textContent = stats.success ?? 0;
+  }
+
+  if (total) {
+    total.textContent = stats.total ?? 0;
+  }
+});
+
+// =========================
+// ADMIN STATUS UPDATE
+// =========================
+
+socket.on('admin-update', () => {
+
+  console.log('👤 ADMIN STATUS UPDATE');
+
+  if (location.hash === '#admins') {
+    loadAdmins();
+  }
+});
+
+// =========================
+// LOGS CLEARED
+// =========================
+
+socket.on('logs-cleared', () => {
+
+  console.log('🗑️ LOGS CLEARED');
+
+  const body = document.getElementById('dataBody');
+
+  if (body) {
+    body.innerHTML = '';
+  }
+
+  const success = document.getElementById('successCount');
+  const total = document.getElementById('totalCount');
+
+  if (success) success.textContent = '0';
+  if (total) total.textContent = '0';
 });
 
 // =========================
