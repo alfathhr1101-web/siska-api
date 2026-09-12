@@ -2,8 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import http from 'http';
 import { Server } from 'socket.io';
-import { appendToSheet } from './googleSheet.js';
+import { appendToSheet, getSpreadsheetSheets, extractSpreadsheetId } from './googleSheet.js';
 import banksRouter from './routes/banks.routes.js';
+import db from './config/database.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -11,9 +12,12 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: [
-    'https://botwdsis4d.com',
-    'https://www.botwdsis4d.com'
-  ]
+      'https://botwdsis4d.com',
+      'https://www.botwdsis4d.com',
+      'http://localhost:5173',
+      'http://127.0.0.1:5173'
+    ],
+    methods: ['GET', 'POST', 'DELETE']
   }
 });
 
@@ -24,6 +28,7 @@ const PORT = 3001;
 // =========================
 app.use(cors());
 app.use(express.json({ limit: '200kb' }));
+
 app.use('/api/banks', banksRouter);
 
 // =========================
@@ -34,32 +39,67 @@ const trxIds = new Set();
 
 let adminStatus = {};
 
+async function loadAdminStatus() {
+  try {
+    const [rows] = await db.query(`
+      SELECT
+        admin,
+        active_bank AS activeBank,
+        bot_enabled AS botEnabled,
+        last_seen AS lastSeen
+      FROM admin_status
+    `);
+
+    adminStatus = {};
+
+    for (const row of rows) {
+      adminStatus[row.admin] = {
+        admin: row.admin,
+        activeBank: row.activeBank || '',
+        botEnabled: Boolean(row.botEnabled),
+        lastSeen: Number(row.lastSeen) || Date.now()
+      };
+    }
+
+    console.log(
+      `[${nowTime()}] [MYSQL] ${rows.length} status admin berhasil dimuat`
+    );
+  } catch (error) {
+    console.error(
+      `[${nowTime()}] [MYSQL LOAD ERROR] ${error.message}`
+    );
+  }
+}
+
 // =========================
 // HELPER
 // =========================
-function nowTime(){
+function nowTime() {
   return new Date().toLocaleTimeString('id-ID');
 }
 
-function getStats(){
+function normalizeAdmin(admin = '') {
+  return String(admin).trim().toLowerCase();
+}
+
+function getStats() {
   return {
     total: logs.length,
-    success: logs.filter(x => x.status === 'APPROVED').length
+    success: logs.filter(
+      item => String(item.status).toUpperCase() === 'APPROVED'
+    ).length
   };
 }
 
 // =========================
 // SOCKET.IO
 // =========================
-io.on('connection', (socket) => {
-
-  // kirim data awal
+io.on('connection', socket => {
   socket.emit('init-data', {
     logs: logs.slice(0, 40),
-    stats: getStats()
+    stats: getStats(),
+    admins: Object.values(adminStatus)
   });
-
-  // sengaja tidak log connect/disconnect
 });
 
 // =========================
@@ -68,7 +108,8 @@ io.on('connection', (socket) => {
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'SIS4D Realtime Server'
+    message: 'SIS4D Realtime Server',
+    port: PORT
   });
 });
 
@@ -86,41 +127,92 @@ app.get('/health', (req, res) => {
 });
 
 // =========================
-// ADMIN HEARTBEAT
+// ADMIN STATUS
 // =========================
-app.post('/api/admin-status', (req, res) => {
+app.post('/api/admin-status', async (req, res) => {
+  try {
+    const {
+      admin,
+      activeBank,
+      botEnabled,
+      lastSeen
+    } = req.body;
 
-  const {
-    admin,
-    activeBank,
-    botEnabled,
-    lastSeen
-  } = req.body;
+    const adminName = normalizeAdmin(admin);
 
-  if (!admin) {
-    return res.status(400).json({
+    if (!adminName || adminName === 'unknown') {
+      return res.status(400).json({
+        success: false,
+        message: 'admin wajib diisi dengan benar'
+      });
+    }
+
+    const previous = adminStatus[adminName] || {};
+
+    adminStatus[adminName] = {
+      admin: adminName,
+
+      activeBank:
+        typeof activeBank === 'string'
+          ? activeBank.trim()
+          : previous.activeBank || '',
+
+      botEnabled:
+        typeof botEnabled === 'boolean'
+          ? botEnabled
+          : previous.botEnabled !== false,
+
+      lastSeen: lastSeen || Date.now()
+    };
+
+    await db.query(
+  `
+  INSERT INTO admin_status
+    (admin, active_bank, bot_enabled, last_seen)
+  VALUES (?, ?, ?, ?)
+  ON DUPLICATE KEY UPDATE
+    active_bank = VALUES(active_bank),
+    bot_enabled = VALUES(bot_enabled),
+    last_seen = VALUES(last_seen)
+  `,
+  [
+    adminStatus[adminName].admin,
+    adminStatus[adminName].activeBank,
+    adminStatus[adminName].botEnabled ? 1 : 0,
+    adminStatus[adminName].lastSeen
+  ]
+);
+
+    io.emit('admin-update', adminStatus[adminName]);
+
+    console.log(
+      `[${nowTime()}] [ADMIN STATUS] ${adminName} | Bank: ${
+        adminStatus[adminName].activeBank || '-'
+      } | BOT: ${
+        adminStatus[adminName].botEnabled ? 'ON' : 'OFF'
+      }`
+    );
+
+    res.json({
+      success: true,
+      data: adminStatus[adminName]
+    });
+  } catch (error) {
+    console.error(
+      `[${nowTime()}] [ADMIN STATUS ERROR] ${error.message}`
+    );
+
+    res.status(500).json({
       success: false,
-      message: 'admin wajib diisi'
+      message: error.message
     });
   }
-
-  adminStatus[admin.toLowerCase()] = {
-    admin: admin.toLowerCase(),
-    activeBank,
-    botEnabled: botEnabled !== false,
-    lastSeen: lastSeen || Date.now()
-  };
-
-  io.emit('admin-update');
-
-  res.json({ success: true });
 });
 
 // =========================
-// GET ADMIN ONLINE
+// GET ADMIN STATUS
 // =========================
 app.get('/api/admin-status', (req, res) => {
-
   const now = Date.now();
 
   const result = Object.values(adminStatus).map(item => ({
@@ -131,18 +223,23 @@ app.get('/api/admin-status', (req, res) => {
   res.json(result);
 });
 
-// cleanup admin offline
+// =========================
+// CLEANUP ADMIN OFFLINE
+// =========================
 setInterval(() => {
-
   const now = Date.now();
 
   for (const key in adminStatus) {
-
     if (now - adminStatus[key].lastSeen > 5 * 60 * 1000) {
+      console.log(
+        `[${nowTime()}] [ADMIN OFFLINE] ${adminStatus[key].admin}`
+      );
+
       delete adminStatus[key];
     }
   }
 
+  io.emit('admin-update');
 }, 60000);
 
 // =========================
@@ -156,17 +253,15 @@ app.get('/api/logs', (req, res) => {
 // POST TRANSAKSI
 // =========================
 app.post('/api/logs', async (req, res) => {
-
   try {
-
     const item = {
-
       id: Date.now(),
 
       tanggal: req.body.tanggal || '',
 
       userId: req.body.userId || '',
       atasNama: req.body.atasNama || '',
+
       nominal: Number(req.body.nominal || 0),
 
       username: req.body.username || '',
@@ -177,39 +272,55 @@ app.post('/api/logs', async (req, res) => {
 
       note: req.body.note || '',
 
-      admin: (req.body.admin || '').toLowerCase(),
+      admin: normalizeAdmin(req.body.admin),
 
-      operatorLogin:
-        (req.body.operatorLogin || '').toLowerCase(),
+      operatorLogin: normalizeAdmin(
+        req.body.operatorLogin || req.body.admin
+      ),
 
       status: req.body.status || 'APPROVED',
 
-      trxId: req.body.trxId || ''
+      trxId: String(req.body.trxId || '').trim()
     };
 
-    // validasi
+    // =========================
+    // VALIDASI TRANSAKSI
+    // =========================
     if (!item.trxId) {
       return res.status(400).json({
         success: false,
-        message: 'trxId wajib'
+        message: 'trxId wajib diisi'
       });
     }
 
-    // anti duplikat
+    if (!item.nominal || item.nominal <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'nominal tidak valid'
+      });
+    }
+
+    // =========================
+    // ANTI DUPLIKAT
+    // =========================
     if (trxIds.has(item.trxId)) {
       return res.json({
         success: true,
-        duplicate: true
+        duplicate: true,
+        message: 'Transaksi sudah pernah diterima'
       });
     }
 
     trxIds.add(item.trxId);
 
-    // simpan terbaru di depan
+    // =========================
+    // SIMPAN TRANSAKSI
+    // SEMUA TRANSAKSI WAJIB MASUK DASHBOARD
+    // =========================
     logs.unshift(item);
 
+    // Batasi memory maksimal 500 transaksi
     if (logs.length > 500) {
-
       const removed = logs.pop();
 
       if (removed?.trxId) {
@@ -217,66 +328,95 @@ app.post('/api/logs', async (req, res) => {
       }
     }
 
-    // realtime dashboard
+    // =========================
+    // REALTIME DASHBOARD
+    // =========================
     io.emit('new-log', item);
     io.emit('stats-update', getStats());
 
-    // log terminal bersih
     console.log(
-      `[${nowTime()}] [${item.admin}] ${item.username} | Rp ${item.nominal.toLocaleString('id-ID')}`
+      `[${nowTime()}] [DASHBOARD] [${
+        item.admin || '-'
+      }] ${item.username || item.userId || '-'} | Rp ${
+        item.nominal.toLocaleString('id-ID')
+      }`
     );
 
-    // kirim response cepat
+    // Response langsung ke extension
     res.json({
       success: true,
       item
     });
 
-    // background google sheet
-    try {
+    // =========================
+    // ATURAN BOT GOOGLE SHEETS
+    // =========================
+    const adminInfo = adminStatus[item.admin];
 
-      const adminInfo = adminStatus[item.admin];
-      const bankName = adminInfo?.activeBank || '';
+    const botIsOn = adminInfo?.botEnabled === true;
 
-if (bankName) {
+    const activeBank =
+      adminInfo?.activeBank ||
+      item.bankAktif ||
+      '';
 
-  appendToSheet(
-    bankName,
-    item,
-    bankName
-  )
-    .then(() => {
-
+    // BOT OFF:
+    // Transaksi tetap dashboard, tidak dikirim ke Sheet
+    if (!botIsOn) {
       console.log(
-        `[${nowTime()}] [SHEET OK] ${bankName}`
+        `[${nowTime()}] [SHEET SKIP] Admin ${
+          item.admin || '-'
+        } BOT OFF`
       );
 
-    })
-    .catch(err => {
-
-      console.error(
-        `[${nowTime()}] [SHEET ERROR] ${err.message}`
-      );
-    });
-}
-
-    } catch (err) {
-
-      console.error(
-        `[${nowTime()}] [SHEET ERROR] ${err.message}`
-      );
+      return;
     }
 
-  } catch (err) {
+    // BOT ON tapi belum pilih bank:
+    // Tetap dashboard, tidak dikirim ke Sheet
+    if (!activeBank) {
+      console.log(
+        `[${nowTime()}] [SHEET SKIP] Admin ${
+          item.admin || '-'
+        } belum memilih bank aktif`
+      );
 
+      return;
+    }
+
+    // =========================
+    // KIRIM KE GOOGLE SHEETS
+    // =========================
+    try {
+      await appendToSheet(
+        activeBank,
+        item,
+        activeBank
+      );
+
+      console.log(
+        `[${nowTime()}] [SHEET OK] Admin ${
+          item.admin || '-'
+        } | Bank ${activeBank} | ${item.trxId}`
+      );
+    } catch (error) {
+      console.error(
+        `[${nowTime()}] [SHEET ERROR] ${activeBank} | ${
+          error.message
+        }`
+      );
+    }
+  } catch (error) {
     console.error(
-      `[${nowTime()}] [POST ERROR] ${err.message}`
+      `[${nowTime()}] [POST ERROR] ${error.message}`
     );
 
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
   }
 });
 
@@ -284,26 +424,161 @@ if (bankName) {
 // CLEAR LOG
 // =========================
 app.delete('/api/logs', (req, res) => {
-
   logs = [];
   trxIds.clear();
 
   io.emit('logs-cleared');
+  io.emit('stats-update', getStats());
+
+  console.log(`[${nowTime()}] [LOGS CLEARED]`);
 
   res.json({
-    success: true
+    success: true,
+    message: 'Semua log berhasil dihapus'
   });
+});
+
+
+// =========================
+// GOOGLE SPREADSHEET CONFIG
+// =========================
+
+// Ambil semua konfigurasi spreadsheet
+app.get('/api/spreadsheet-config', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT
+        id,
+        name,
+        spreadsheet_url,
+        spreadsheet_id,
+        is_active,
+        created_at,
+        updated_at
+      FROM spreadsheet_config
+      ORDER BY id DESC
+    `);
+
+    res.json({
+      success: true,
+      data: rows
+    });
+  } catch (error) {
+    console.error('[SPREADSHEET CONFIG GET]', error.message);
+
+    res.status(500).json({
+      success: false,
+      message: 'Gagal mengambil konfigurasi Spreadsheet'
+    });
+  }
+});
+
+
+// Simpan konfigurasi spreadsheet baru
+app.post('/api/spreadsheet-config', async (req, res) => {
+  try {
+    const {
+      name,
+      spreadsheetUrl
+    } = req.body;
+
+    if (!name || !spreadsheetUrl) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nama dan link Spreadsheet wajib diisi'
+      });
+    }
+
+    const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
+
+    if (!spreadsheetId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Link Google Spreadsheet tidak valid'
+      });
+    }
+
+    const [result] = await db.query(
+      `
+      INSERT INTO spreadsheet_config
+        (name, spreadsheet_url, spreadsheet_id, is_active)
+      VALUES (?, ?, ?, 1)
+      `,
+      [
+        name,
+        spreadsheetUrl,
+        spreadsheetId
+      ]
+    );
+
+    res.json({
+      success: true,
+      message: 'Spreadsheet berhasil disimpan',
+      data: {
+        id: result.insertId,
+        name,
+        spreadsheetUrl,
+        spreadsheetId
+      }
+    });
+  } catch (error) {
+    console.error('[SPREADSHEET CONFIG POST]', error.message);
+
+    res.status(500).json({
+      success: false,
+      message: 'Gagal menyimpan konfigurasi Spreadsheet'
+    });
+  }
+});
+
+// =========================
+// BACA SELURUH TAB SPREADSHEET
+// =========================
+app.get('/api/google-sheets', async (req, res) => {
+  try {
+    const { spreadsheetId, url } = req.query;
+
+    const id = extractSpreadsheetId(
+      spreadsheetId || url || ''
+    );
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Spreadsheet ID atau link tidak valid'
+      });
+    }
+
+    const sheets = await getSpreadsheetSheets(id);
+
+    res.json({
+      success: true,
+      data: sheets
+    });
+  } catch (error) {
+    console.error('[GOOGLE SHEETS GET]', error.message);
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
 });
 
 // =========================
 // START SERVER
 // =========================
-server.listen(PORT, () => {
+async function startServer() {
+  await loadAdminStatus();
 
-  console.log('');
-  console.log('====================================');
-  console.log('🚀 SIS4D Realtime Server');
-  console.log(`📡 http://127.0.0.1:${PORT}`);
-  console.log('====================================');
-  console.log('');
-});
+  server.listen(PORT, () => {
+    console.log('');
+    console.log('====================================');
+    console.log('🚀 SIS4D Realtime Server');
+    console.log(`📡 http://127.0.0.1:${PORT}`);
+    console.log('====================================');
+    console.log('');
+  });
+}
+
+startServer();

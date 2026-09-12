@@ -8,52 +8,114 @@
 </head>
 <body>
 
-  <div class="card">
+  <main class="card">
 
-    <div class="header">
-      <div class="logo">🚀</div>
-      <div>
-        <h1>SIS4D Operator</h1>
-        <p>Realtime Sheet Sync</p>
+    <header class="header">
+      <div class="brand-mark">
+        <span class="brand-orbit"></span>
+        <span class="brand-core">S</span>
       </div>
-    </div>
 
-    <div class="field">
-      <label>Admin Login</label>
-      <input type="text" id="loginUser" readonly value="Memuat...">
-    </div>
+      <div class="brand-text">
+        <h1>SIS4D <span>BOT WD</span></h1>
+        <p>REALTIME INPUT SPREADSHEET</p>
+      </div>
 
-    <div class="field">
-      <label>Bank Aktif</label>
-      <select id="bankSelect">
-        <option value="">Memuat bank...</option>
-      </select>
-    </div>
+      <div class="live-indicator">
+        <span></span>
+        LIVE
+      </div>
+    </header>
 
-    <button id="saveBank">
-      💾 Simpan Bank Aktif
+    <div class="header-line"></div>
+
+    <section class="connection-card">
+      <div class="connection-icon">⌁</div>
+      <div class="connection-info">
+        <strong>Extension Gateway</strong>
+        <small>Secure realtime connection</small>
+      </div>
+      <div class="connection-status">
+        <span></span>
+        CONNECTED
+      </div>
+    </section>
+
+    <section class="field-group">
+      <label for="loginUser">
+        <span class="label-dot"></span>
+        ADMIN LOGIN
+      </label>
+
+      <div class="input-wrap readonly-wrap">
+        <span class="input-icon">◉</span>
+        <input
+          type="text"
+          id="loginUser"
+          readonly
+          value="Memuat..."
+        >
+        <span class="verified">✓</span>
+      </div>
+    </section>
+
+    <section class="field-group">
+      <label for="bankSelect">
+        <span class="label-dot"></span>
+        BANK AKTIF
+      </label>
+
+      <div class="input-wrap">
+        <span class="input-icon">▣</span>
+        <select id="bankSelect">
+          <option value="">Memuat bank...</option>
+        </select>
+      </div>
+    </section>
+
+    <button id="saveBank" class="primary-button">
+      <span class="button-icon">↻</span>
+      SIMPAN BANK AKTIF
+      <span class="button-arrow">›</span>
     </button>
-<div class="toggle-row">
-  <span>Status Bot</span>
 
-  <label class="switch">
-    <input type="checkbox" id="botEnabled">
-    <span class="slider"></span>
-  </label>
-</div>
+    <section class="bot-panel">
+      <div class="bot-info">
+        <div class="bot-icon">⌁</div>
+        <div>
+          <strong>BOT AUTOMATION</strong>
+          <small>input transaksi approved otomatis</small>
+        </div>
+      </div>
 
-<div id="botStatus" class="status">
-  BOT AKTIF
-</div>
+      <label class="switch">
+        <input type="checkbox" id="botEnabled">
+        <span class="slider"></span>
+      </label>
+    </section>
+
+    <div id="botStatus" class="status bot-status">
+      BOT AKTIF
+    </div>
+
     <div id="statusText" class="status">
       Belum memilih bank aktif
     </div>
 
-    <div class="note">
-      Transaksi approve otomatis masuk ke sheet bank yang dipilih admin ini.
-    </div>
+    <section class="sync-info">
+      <div class="sync-icon">⇄</div>
+      <div>
+        <strong>REALTIME SHEET SYNC</strong>
+        <p>Transaksi approved dikirim otomatis ke server dan dashboard.</p>
+      </div>
+    </section>
 
-  </div>
+    <footer class="footer">
+      <span> SIS4D OPERATOR SYSTEM</span>
+      <span class="version">BY ALFATH</span>
+    </footer>
+
+  </main>
 
   <script src="popup.js"></script>
 </body>

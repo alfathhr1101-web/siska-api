@@ -1,177 +1,351 @@
-// =====================================
-// SIS4D EXTENSION POPUP
-// =====================================
+document.addEventListener("DOMContentLoaded", async () => {
+  const API_BASE = "http://localhost:3001";
 
-document.addEventListener('DOMContentLoaded', async () => {
+  const loginInput = document.getElementById("loginUser");
+  const bankSelect = document.getElementById("bankSelect");
+  const saveBtn = document.getElementById("saveBank");
+  const statusText = document.getElementById("statusText");
+  const botToggle = document.getElementById("botEnabled");
+  const botStatus = document.getElementById("botStatus");
 
-  const loginInput = document.getElementById('loginUser');
-  const bankSelect = document.getElementById('bankSelect');
-  const saveBtn = document.getElementById('saveBank');
-  const statusEl = document.getElementById('statusText');
-  const botToggle = document.getElementById('botEnabled');
-  const botStatus = document.getElementById('botStatus');
+  const liveIndicator = document.querySelector(".live-indicator");
+  const connectionStatus = document.querySelector(".connection-status");
 
-  // ambil admin login dari content script
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  let currentOperator = "unknown";
 
-    if (!tabs[0]) return;
+  /*
+  |--------------------------------------------------------------------------
+  | STATUS BACKEND REAL
+  |--------------------------------------------------------------------------
+  */
 
-    chrome.tabs.sendMessage(
-      tabs[0].id,
-      { type: 'GET_OPERATOR' },
-      async (res) => {
+  async function checkBackendConnection() {
+    try {
+      const response = await fetch(`${API_BASE}/health`, {
+        method: "GET",
+        cache: "no-store"
+      });
 
-        const operator = res?.operator || 'unknown';
-
-        loginInput.value = operator;
-
-await loadBanks(operator);
-
-// =====================================
-// LOAD STATUS BOT
-// =====================================
-chrome.storage.local.get(
-  [`sis4d_bot_${operator.toLowerCase()}`],
-  (res) => {
-
-    const enabled =
-      res[`sis4d_bot_${operator.toLowerCase()}`] !== false;
-
-    botToggle.checked = enabled;
-
-    updateBotLabel(enabled);
-  }
-);
-        
+      if (!response.ok) {
+        throw new Error("Backend tidak merespons");
       }
-    );
-  });
 
-  // load daftar bank dari server
+      setConnectionStatus(true);
+    } catch (error) {
+      setConnectionStatus(false);
+    }
+  }
+
+  function setConnectionStatus(isConnected) {
+    if (liveIndicator) {
+      liveIndicator.innerHTML = `
+        <span></span>
+        ${isConnected ? "LIVE" : "OFFLINE"}
+      `;
+
+      liveIndicator.style.color = isConnected
+        ? "#55e6a5"
+        : "#ff6b8a";
+
+      const dot = liveIndicator.querySelector("span");
+
+      if (dot) {
+        dot.style.background = isConnected
+          ? "#55e6a5"
+          : "#ff6b8a";
+
+        dot.style.boxShadow = isConnected
+          ? "0 0 7px #55e6a5"
+          : "0 0 7px #ff6b8a";
+      }
+    }
+
+    if (connectionStatus) {
+      connectionStatus.innerHTML = `
+        <span></span>
+        ${isConnected ? "CONNECTED" : "DISCONNECTED"}
+      `;
+
+      connectionStatus.style.color = isConnected
+        ? "#55e6a5"
+        : "#ff6b8a";
+
+      const dot = connectionStatus.querySelector("span");
+
+      if (dot) {
+        dot.style.background = isConnected
+          ? "#55e6a5"
+          : "#ff6b8a";
+
+        dot.style.boxShadow = isConnected
+          ? "0 0 7px #55e6a5"
+          : "0 0 7px #ff6b8a";
+      }
+    }
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | AMBIL OPERATOR DARI TAB AKTIF
+  |--------------------------------------------------------------------------
+  */
+
+  async function getCurrentOperator() {
+    return new Promise((resolve) => {
+      chrome.tabs.query(
+        {
+          active: true,
+          currentWindow: true
+        },
+        (tabs) => {
+          const tab = tabs?.[0];
+
+          if (!tab?.id) {
+            resolve("unknown");
+            return;
+          }
+
+          chrome.tabs.sendMessage(
+            tab.id,
+            {
+              type: "GET_OPERATOR"
+            },
+            (response) => {
+              if (chrome.runtime.lastError) {
+                resolve("unknown");
+                return;
+              }
+
+              resolve(response?.operator || "unknown");
+            }
+          );
+        }
+      );
+    });
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | LOAD BANK DARI BACKEND
+  |--------------------------------------------------------------------------
+  */
+
   async function loadBanks(operator) {
+    bankSelect.innerHTML = `
+      <option value="">Memuat bank...</option>
+    `;
 
     chrome.runtime.sendMessage(
-      { type: 'GET_BANKS' },
+      {
+        type: "GET_BANKS"
+      },
       (response) => {
+        if (chrome.runtime.lastError) {
+          bankSelect.innerHTML = `
+            <option value="">Gagal terhubung ke extension</option>
+          `;
 
-        bankSelect.innerHTML = '';
-
-        if (!response || !response.success) {
-
-          const opt = document.createElement('option');
-          opt.value = '';
-          opt.textContent = 'Gagal ambil bank';
-
-          bankSelect.appendChild(opt);
-
+          statusText.textContent = "Gagal mengambil daftar bank";
           return;
         }
 
-        response.banks.forEach(bank => {
+        if (!response || !response.success) {
+          bankSelect.innerHTML = `
+            <option value="">Gagal memuat bank</option>
+          `;
 
-          const opt = document.createElement('option');
+          statusText.textContent = "Backend bank tidak tersedia";
+          return;
+        }
 
-          opt.value = bank.name;
-          opt.textContent = bank.name;
+        const banks = Array.isArray(response.data)
+          ? response.data
+          : [];
 
-          bankSelect.appendChild(opt);
+        bankSelect.innerHTML = "";
+
+        if (banks.length === 0) {
+          bankSelect.innerHTML = `
+            <option value="">Belum ada bank tersedia</option>
+          `;
+
+          statusText.textContent = "Belum ada bank aktif";
+          return;
+        }
+
+        banks.forEach((bank) => {
+          const bankName =
+            typeof bank === "string"
+              ? bank
+              : bank.name || bank.bankName || "";
+
+          if (!bankName) return;
+
+          const option = document.createElement("option");
+          option.value = bankName;
+          option.textContent = bankName;
+
+          bankSelect.appendChild(option);
         });
 
-        // restore pilihan sebelumnya
-        chrome.storage.local.get(
-          [`sis4d_bank_${operator.toLowerCase()}`],
-          (result) => {
+        const storageKey = `sis4d_bank_${operator.toLowerCase()}`;
 
-            const saved =
-              result[`sis4d_bank_${operator.toLowerCase()}`];
+        chrome.storage.local.get([storageKey], (result) => {
+          const savedBank = result[storageKey];
 
-            if (saved) {
+          if (savedBank) {
+            const bankExists = [...bankSelect.options].some(
+              (option) => option.value === savedBank
+            );
 
-              bankSelect.value = saved;
-              updateStatus(saved);
-
+            if (bankExists) {
+              bankSelect.value = savedBank;
+              statusText.textContent = `Bank aktif: ${savedBank}`;
             } else {
-
-              statusEl.textContent =
-                'Belum memilih bank aktif';
+              statusText.textContent = "Bank tersimpan sudah tidak tersedia";
             }
+          } else {
+            statusText.textContent = "Belum memilih bank aktif";
           }
-        );
+        });
       }
     );
   }
 
-// simpan bank aktif TANPA POPUP
-saveBtn.addEventListener('click', () => {
+  /*
+  |--------------------------------------------------------------------------
+  | LOAD STATUS BOT
+  |--------------------------------------------------------------------------
+  */
 
-  const operator = loginInput.value.trim();
-  const bank = bankSelect.value;
+  function loadBotStatus(operator) {
+    const storageKey = `sis4d_bot_${operator.toLowerCase()}`;
 
-  if (!operator || !bank) {
+    chrome.storage.local.get([storageKey], (result) => {
+      const savedStatus = result[storageKey];
 
-    statusEl.textContent =
-      'Pilih bank terlebih dahulu';
+      // Default BOT aktif jika belum pernah disimpan
+      const isEnabled =
+        typeof savedStatus === "boolean"
+          ? savedStatus
+          : true;
 
-    statusEl.style.color = '#ff6b6b';
-
-    return;
+      botToggle.checked = isEnabled;
+      updateBotLabel(isEnabled);
+    });
   }
 
-  chrome.storage.local.set({
-    [`sis4d_bank_${operator.toLowerCase()}`]: bank
-  }, () => {
+  function updateBotLabel(isEnabled) {
+    if (!botStatus) return;
 
-    updateStatus(bank);
+    botStatus.textContent = isEnabled
+      ? "BOT AKTIF"
+      : "BOT NONAKTIF";
 
-    statusEl.style.color = '#7cff8f';
+    botStatus.style.color = isEnabled
+      ? "#55e6a5"
+      : "#ff6b8a";
 
-    saveBtn.textContent = '✓ Tersimpan';
+    botStatus.style.borderColor = isEnabled
+      ? "rgba(85, 230, 165, 0.15)"
+      : "rgba(255, 107, 138, 0.2)";
 
-    setTimeout(() => {
-      saveBtn.textContent = '💾 Simpan Bank Aktif';
-    }, 1200);
+    botStatus.style.background = isEnabled
+      ? "rgba(85, 230, 165, 0.035)"
+      : "rgba(255, 107, 138, 0.045)";
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | SIMPAN BANK AKTIF
+  |--------------------------------------------------------------------------
+  */
+
+  saveBtn.addEventListener("click", () => {
+    const selectedBank = bankSelect.value;
+
+    if (!selectedBank) {
+      statusText.textContent = "Pilih bank terlebih dahulu";
+      return;
+    }
+
+    const storageKey = `sis4d_bank_${currentOperator.toLowerCase()}`;
+
+    chrome.storage.local.set(
+      {
+        [storageKey]: selectedBank
+      },
+      () => {
+        statusText.textContent = `Bank aktif: ${selectedBank}`;
+
+        saveBtn.innerHTML = `
+          <span class="button-icon">✓</span>
+          BANK BERHASIL DISIMPAN
+          <span class="button-arrow">›</span>
+        `;
+
+        setTimeout(() => {
+          saveBtn.innerHTML = `
+            <span class="button-icon">↻</span>
+            SIMPAN BANK AKTIF
+            <span class="button-arrow">›</span>
+          `;
+        }, 1800);
+
+        chrome.runtime.sendMessage({
+          type: "ADMIN_STATUS",
+          admin: currentOperator,
+          activeBank: selectedBank
+        });
+      }
+    );
   });
 
-}); // <--- penutup saveBtn
+  /*
+  |--------------------------------------------------------------------------
+  | TOGGLE BOT
+  |--------------------------------------------------------------------------
+  */
 
+  botToggle.addEventListener("change", () => {
+    const enabled = botToggle.checked;
+    const storageKey = `sis4d_bot_${currentOperator.toLowerCase()}`;
 
-// =====================================
-// TAMBAH MULAI DARI SINI
-// =====================================
+    chrome.storage.local.set(
+      {
+        [storageKey]: enabled
+      },
+      () => {
+        updateBotLabel(enabled);
 
-// simpan status bot
-botToggle.addEventListener('change', () => {
-
-  const operator = loginInput.value.trim();
-
-  const enabled = botToggle.checked;
-
-  chrome.storage.local.set({
-    [`sis4d_bot_${operator.toLowerCase()}`]: enabled
+        chrome.runtime.sendMessage({
+          type: "ADMIN_STATUS",
+          admin: currentOperator,
+          activeBank: bankSelect.value,
+          botEnabled: enabled
+        });
+      }
+    );
   });
 
-  updateBotLabel(enabled);
+  /*
+  |--------------------------------------------------------------------------
+  | INIT
+  |--------------------------------------------------------------------------
+  */
+
+  currentOperator = await getCurrentOperator();
+
+  console.log("ADMIN TERBACA:", currentOperator);
+
+  loginInput.value = currentOperator;
+
+  await loadBanks(currentOperator);
+  loadBotStatus(currentOperator);
+
+  // Cek backend langsung saat popup dibuka
+  checkBackendConnection();
+
+  // Cek ulang setiap 10 detik
+  setInterval(checkBackendConnection, 10000);
 });
-
-// label BOT
-function updateBotLabel(enabled){
-
-  botStatus.textContent = enabled
-    ? '🟢 BOT AKTIF'
-    : '🔴 BOT OFF';
-
-  botStatus.style.color = enabled
-    ? '#7cff8f'
-    : '#ff6b6b';
-}
-
-// =====================================
-// SAMPAI SINI
-// =====================================
-
-
-function updateStatus(bank) {
-  statusEl.textContent = `✓ Bank aktif: ${bank}`;
-}
-
-}); // penutup DOMContentLoaded

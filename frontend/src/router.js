@@ -22,16 +22,22 @@ import { BanksPage } from './pages/dashboard/BanksPage.js';
 // =========================
 // API ENDPOINT
 // =========================
+const API_BASE =
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3001'
+    : 'https://api.botwdsis4d.com';
+
 const API = {
-  logs: 'https://api.botwdsis4d.com/api/logs',
-  admins: 'https://api.botwdsis4d.com/api/admin-status',
-  banks: 'https://api.botwdsis4d.com/api/banks'
+  logs: `${API_BASE}/api/logs`,
+  admins: `${API_BASE}/api/admin-status`,
+  banks: `${API_BASE}/api/banks`
 };
 
 // =========================
 // SOCKET REALTIME
 // =========================
-const socket = io('https://api.botwdsis4d.com', {
+const socket = io(API_BASE, {
   transports: ['websocket']
 });
 
@@ -197,17 +203,18 @@ function setActive(page) {
 // LOAD LOGS
 // =========================
 async function loadLogs() {
-
   try {
-
     const res = await fetch(API.logs);
     const data = await res.json();
 
-    renderLogTable(data);
+    if (!res.ok) {
+      throw new Error(data.message || `HTTP ${res.status}`);
+    }
 
+    renderLogTable(Array.isArray(data) ? data : []);
   } catch (err) {
-
     console.error('Gagal load logs:', err);
+    renderLogTable([]);
   }
 }
 
@@ -234,24 +241,25 @@ function renderLogTable(data = []) {
 // LOAD ADMINS
 // =========================
 async function loadAdmins() {
-
   try {
-
     const res = await fetch(API.admins);
     const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || `HTTP ${res.status}`);
+    }
 
     const body = document.getElementById('adminBody');
 
     if (!body) return;
 
-    body.innerHTML = data.map(x => `
+    body.innerHTML = (Array.isArray(data) ? data : []).map(x => `
       <tr>
         <td>
           ${x.botEnabled ? '🟢 Online' : '🔴 Bot Off'}
         </td>
 
-        <td>${x.admin}</td>
-
+        <td>${x.admin || '-'}</td>
         <td>${x.activeBank || '-'}</td>
 
         <td>
@@ -261,9 +269,7 @@ async function loadAdmins() {
         </td>
       </tr>
     `).join('');
-
   } catch (err) {
-
     console.error('Gagal load admins:', err);
   }
 }
@@ -272,27 +278,27 @@ async function loadAdmins() {
 // LOAD BANKS
 // =========================
 async function loadBanks() {
-
   try {
-
     const res = await fetch(API.banks);
     const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || `HTTP ${res.status}`);
+    }
 
     const body = document.getElementById('bankBody');
 
     if (!body) return;
 
-    body.innerHTML = data.map(x => `
+    body.innerHTML = (Array.isArray(data) ? data : []).map(x => `
       <tr>
-        <td><strong>${x.name}</strong></td>
-        <td>${x.sheetName}</td>
-        <td>${x.startRow}</td>
+        <td><strong>${x.name || '-'}</strong></td>
+        <td>${x.sheetName || '-'}</td>
+        <td>${x.startRow || '-'}</td>
         <td>${x.active ? '🟢 Aktif' : '⚫ Nonaktif'}</td>
       </tr>
     `).join('');
-
   } catch (err) {
-
     console.error('Gagal load banks:', err);
   }
 }

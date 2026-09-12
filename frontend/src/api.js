@@ -1,4 +1,4 @@
-const API_BASE = 'https://api.botwdsis4d.com';
+const API_BASE = 'http://localhost:3001';
 
 // =========================
 // LOGS

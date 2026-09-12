@@ -1,13 +1,23 @@
 import { google } from 'googleapis';
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const credentials = JSON.parse(
-  fs.readFileSync('./google-service.json', 'utf8')
+  fs.readFileSync(
+    path.join(__dirname, 'google-service.json'),
+    'utf8'
+  )
 );
 
 const auth = new google.auth.GoogleAuth({
   credentials,
-  scopes: ['https://www.googleapis.com/auth/spreadsheets']
+  scopes: [
+    'https://www.googleapis.com/auth/spreadsheets'
+  ]
 });
 
 const sheets = google.sheets({
@@ -15,20 +25,82 @@ const sheets = google.sheets({
   auth
 });
 
+// Spreadsheet default lama
 const SPREADSHEET_ID =
-  '1fZLzW-SEZ2LWmqIIfKr7LSxRbJLMoo8C8VJGJKSuhj8';
+  '1fZLzW-SE2LWmqIIfKr7LSxRbJLMoo8C8VJGJKSuhj8';
+
+// =====================================
+// Ambil Spreadsheet ID dari link Google
+// =====================================
+export function extractSpreadsheetId(input = '') {
+  const value = String(input).trim();
+
+  if (!value) {
+    return '';
+  }
+
+  // Jika yang dimasukkan langsung berupa ID
+  if (!value.includes('/')) {
+    return value;
+  }
+
+  const match = value.match(
+    /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/
+  );
+
+  return match ? match[1] : '';
+}
+
+// =====================================
+// Baca seluruh spreadsheet dan semua tab
+// =====================================
+export async function getSpreadsheetSheets(
+  spreadsheetId = SPREADSHEET_ID
+) {
+  const id = extractSpreadsheetId(spreadsheetId);
+
+  if (!id) {
+    throw new Error('Spreadsheet ID atau link tidak valid');
+  }
+
+  const response = await sheets.spreadsheets.get({
+    spreadsheetId: id,
+    fields:
+      'spreadsheetId,properties(title),sheets(properties(sheetId,title,index))'
+  });
+
+  const spreadsheet = response.data;
+
+  return {
+    spreadsheetId: spreadsheet.spreadsheetId,
+    spreadsheetName:
+      spreadsheet.properties?.title || '',
+    sheets: (spreadsheet.sheets || [])
+      .map(sheet => ({
+        sheetId: sheet.properties.sheetId,
+        title: sheet.properties.title,
+        index: sheet.properties.index
+      }))
+      .sort((a, b) => a.index - b.index)
+  };
+}
 
 // =====================================
 // Cari baris kosong pertama mulai B4
 // =====================================
-async function getNextRow(sheetName){
+async function getNextRow(
+  sheetName,
+  spreadsheetId = SPREADSHEET_ID
+) {
+  sheetName =
+    typeof sheetName === 'object'
+      ? sheetName.name || sheetName.title
+      : sheetName;
 
-  sheetName = typeof sheetName === 'object'
-    ? sheetName.name
-    : sheetName;
+  const id = extractSpreadsheetId(spreadsheetId);
 
   const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
+    spreadsheetId: id,
     range: `'${sheetName}'!B4:B1000`
   });
 
@@ -36,9 +108,11 @@ async function getNextRow(sheetName){
 
   let row = 4;
 
-  for(const r of rows){
-
-    if(!r[0] || r[0].toString().trim() === ''){
+  for (const currentRow of rows) {
+    if (
+      !currentRow[0] ||
+      currentRow[0].toString().trim() === ''
+    ) {
       return row;
     }
 
@@ -50,29 +124,30 @@ async function getNextRow(sheetName){
 
 // =====================================
 // Ambil nama rekening dari bank tujuan
-// contoh:
+// Contoh:
 // BCA - xxxxx7144 - PRAKITNO
-// hasil:
+// Hasil:
 // PRAKITNO
 // =====================================
-function extractNama(bankTujuan){
+function extractNama(bankTujuan) {
+  if (!bankTujuan) {
+    return '';
+  }
 
-  if(!bankTujuan) return '';
+  const parts = String(bankTujuan).split('-');
 
-  const parts = bankTujuan.split('-');
-
-  if(parts.length >= 3){
+  if (parts.length >= 3) {
     return parts.slice(2).join('-').trim();
   }
 
-  return bankTujuan.trim();
+  return String(bankTujuan).trim();
 }
 
 // =====================================
-// HITUNG BIAYA ADMIN
+// NORMALISASI NAMA BANK
 // =====================================
 function normalizeBank(text = '') {
-  const t = text.toUpperCase();
+  const t = String(text).toUpperCase();
 
   if (t.includes('BCA')) return 'BCA';
   if (t.includes('BNI')) return 'BNI';
@@ -86,85 +161,115 @@ function normalizeBank(text = '') {
   return t.trim();
 }
 
-function getAdminFee(bankAktif, bankTujuan){
-
+// =====================================
+// HITUNG BIAYA ADMIN
+// =====================================
+function getAdminFee(bankAktif, bankTujuan) {
   const asal = normalizeBank(bankAktif);
 
   const tujuan = normalizeBank(
-    (bankTujuan || '').split('-')[0]
+    String(bankTujuan || '').split('-')[0]
   );
 
+  // Bank aktif sama dengan bank tujuan
   if (asal === tujuan) {
     return 0;
   }
 
-  if (tujuan === 'DANA' || tujuan === 'OVO') return 0;
+  // DANA dan OVO tidak dikenakan biaya
+  if (tujuan === 'DANA' || tujuan === 'OVO') {
+    return 0;
+  }
 
-  if (tujuan === 'GOPAY' || tujuan === 'LINKAJA') return 1000;
+  // GOPAY dan LINKAJA
+  if (
+    tujuan === 'GOPAY' ||
+    tujuan === 'LINKAJA'
+  ) {
+    return 1000;
+  }
 
+  // Bank berbeda lainnya
   return 2500;
 }
 
 // =====================================
 // Tulis transaksi ke sheet
 // =====================================
-export async function appendToSheet(sheetName, item, bankAktif){
+export async function appendToSheet(
+  sheetName,
+  item,
+  bankAktif,
+  spreadsheetId = SPREADSHEET_ID
+) {
   console.log('RAW DATA:', {
+    spreadsheetId,
+    sheetName,
     bankAktif,
     bankTujuan: item.bankTujuan
   });
-  sheetName = typeof sheetName === 'object'
-    ? sheetName.name
-    : sheetName;
 
-  const row = await getNextRow(sheetName);
+  sheetName =
+    typeof sheetName === 'object'
+      ? sheetName.name || sheetName.title
+      : sheetName;
+
+  const id = extractSpreadsheetId(spreadsheetId);
+
+  if (!id) {
+    throw new Error('Spreadsheet ID tidak valid');
+  }
+
+  if (!sheetName) {
+    throw new Error('Nama sheet tujuan wajib diisi');
+  }
+
+  const row = await getNextRow(
+    sheetName,
+    id
+  );
 
   const nama =
-    item.atasNama || extractNama(item.bankTujuan);
+    item.atasNama ||
+    extractNama(item.bankTujuan);
 
-const biayaAdmin = getAdminFee(
-  bankAktif,
-  item.bankTujuan
-);
+  const biayaAdmin = getAdminFee(
+    bankAktif,
+    item.bankTujuan
+  );
 
   const data = [
-
     // TRANSAKSI UTAMA
     {
       range: `'${sheetName}'!B${row}`,
-      values: [[ nama ]]
+      values: [[nama]]
     },
-
     {
       range: `'${sheetName}'!C${row}`,
-      values: [[ item.nominal ]]
+      values: [[item.nominal]]
     },
-
     {
       range: `'${sheetName}'!F${row}`,
-      values: [[ item.userId ]]
+      values: [[item.userId]]
     }
-
   ];
 
-  // Kalau ada biaya admin -> tambah baris di bawahnya
+  // Kalau ada biaya admin, tambah baris di bawahnya
   if (biayaAdmin > 0) {
-
     data.push(
       {
         range: `'${sheetName}'!B${row + 1}`,
-        values: [[ 'BIAYA TRANSFER' ]]
+        values: [['BIAYA TRANSFER']]
       },
       {
         range: `'${sheetName}'!C${row + 1}`,
-        values: [[ biayaAdmin ]]
+        values: [[biayaAdmin]]
       }
     );
-
   }
 
   await sheets.spreadsheets.values.batchUpdate({
-    spreadsheetId: SPREADSHEET_ID,
+    spreadsheetId: id,
     requestBody: {
       valueInputOption: 'USER_ENTERED',
       data
@@ -174,4 +279,31 @@ const biayaAdmin = getAdminFee(
   console.log(
     `Transaksi masuk ke ${sheetName} baris ${row} | biaya admin: ${biayaAdmin}`
   );
+
+  return {
+    success: true,
+    spreadsheetId: id,
+    sheetName,
+    row,
+    biayaAdmin
+  };
+}
+
+// =====================================
+// Tes koneksi Google Sheets
+// =====================================
+export async function testSpreadsheetConnection(
+  spreadsheetId = SPREADSHEET_ID
+) {
+  const result = await getSpreadsheetSheets(
+    spreadsheetId
+  );
+
+  return {
+    success: true,
+    spreadsheetId: result.spreadsheetId,
+    spreadsheetName: result.spreadsheetName,
+    totalSheets: result.sheets.length,
+    sheets: result.sheets
+  };
 }

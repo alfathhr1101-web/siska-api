@@ -1,103 +1,236 @@
-// =====================================
-// SIS4D EXTENSION BACKGROUND
-// =====================================
+const API_BASE = "http://localhost:3001";
 
-const API_BASE = 'https://api.botwdsis4d.com';
+/*
+|--------------------------------------------------------------------------
+| BOT STATUS
+|--------------------------------------------------------------------------
+*/
 
-// helper request
-async function post(url, data) {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data)
-  });
+async function getBotStatus(admin = "") {
+  const keys = [
+    "sis4d_bot_active",
+    "botEnabled",
+    "bot_enabled"
+  ];
 
-  return res.json();
-}
+  if (admin) {
+    keys.push(`sis4d_bot_${admin.toLowerCase()}`);
+  }
 
-// =====================================
-// LISTENER MESSAGE DARI CONTENT / POPUP
-// =====================================
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  const data = await chrome.storage.local.get(keys);
 
-// kirim transaksi ke server
-if (message.type === 'SEND_TO_API') {
+  if (
+    admin &&
+    typeof data[`sis4d_bot_${admin.toLowerCase()}`] === "boolean"
+  ) {
+    return data[`sis4d_bot_${admin.toLowerCase()}`];
+  }
 
-  chrome.storage.local.get(['botEnabled'], async (result) => {
+  if (typeof data.sis4d_bot_active === "boolean") {
+    return data.sis4d_bot_active;
+  }
 
-    // CEK STATUS BOT
-    if (!result.botEnabled) {
-      console.log('Bot OFF -> transaksi tidak dikirim');
+  if (typeof data.botEnabled === "boolean") {
+    return data.botEnabled;
+  }
 
-      sendResponse({
-        success: false,
-        skipped: true,
-        message: 'Bot OFF'
-      });
-
-      return;
-    }
-
-    try {
-
-      const response = await post(`${API_BASE}/api/logs`, message.data);
-
-      sendResponse(response);
-
-    } catch (err) {
-
-      console.error('Gagal kirim transaksi:', err);
-
-      sendResponse({
-        success: false,
-        error: err.message
-      });
-    }
-  });
+  if (typeof data.bot_enabled === "boolean") {
+    return data.bot_enabled;
+  }
 
   return true;
 }
 
-  // kirim status admin online
-  if (message.type === 'ADMIN_STATUS') {
+/*
+|--------------------------------------------------------------------------
+| KIRIM STATUS ADMIN
+|--------------------------------------------------------------------------
+*/
 
-    post(`${API_BASE}/api/admin-status`, message.data)
-      .then(result => sendResponse(result))
-      .catch(err => {
-        console.error('Gagal kirim status admin:', err);
+async function sendAdminStatus(payload = {}) {
+  try {
+    const admin = String(payload.admin || "").trim();
 
-        sendResponse({
-          success: false,
-          error: err.message
-        });
-      });
+    if (!admin || admin === "unknown") {
+      throw new Error("Nama admin kosong atau tidak valid");
+    }
 
-    return true;
+    const cleanPayload = {
+      admin,
+      activeBank: payload.activeBank || "",
+      botEnabled:
+        typeof payload.botEnabled === "boolean"
+          ? payload.botEnabled
+          : await getBotStatus(admin)
+    };
+
+    const res = await fetch(`${API_BASE}/api/admin-status`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(cleanPayload)
+    });
+
+    const text = await res.text();
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+
+    const result = JSON.parse(text);
+
+    console.log("Status admin berhasil dikirim:", cleanPayload);
+
+    return result;
+  } catch (error) {
+    console.error("Gagal kirim status admin:", error);
+    throw error;
+  }
+}
+
+/*
+|--------------------------------------------------------------------------
+| KIRIM TRANSAKSI
+|--------------------------------------------------------------------------
+*/
+
+async function sendTransaction(item = {}) {
+  const admin = String(item.admin || "").trim();
+  const botEnabled = await getBotStatus(admin);
+
+  if (!botEnabled) {
+    console.log("Bot OFF -> transaksi tidak dikirim");
+
+    return {
+      success: false,
+      message: "Bot sedang OFF"
+    };
   }
 
-  // ambil daftar bank dari server
-  if (message.type === 'GET_BANKS') {
+  try {
+    const res = await fetch(`${API_BASE}/api/logs`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(item)
+    });
 
-    fetch(`${API_BASE}/api/banks`)
-      .then(res => res.json())
-      .then(data => {
-        sendResponse({
-          success: true,
-          banks: data
-        });
-      })
-      .catch(err => {
-        console.error('Gagal ambil bank:', err);
+    const text = await res.text();
 
-        sendResponse({
-          success: false,
-          error: err.message,
-          banks: []
-        });
-      });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
 
-    return true;
+    const result = JSON.parse(text);
+
+    console.log("Transaksi berhasil dikirim:", result);
+
+    return result;
+  } catch (error) {
+    console.error("Gagal kirim transaksi:", error);
+
+    return {
+      success: false,
+      message: error.message
+    };
   }
-});
+}
+
+/*
+|--------------------------------------------------------------------------
+| MESSAGE HANDLER
+|--------------------------------------------------------------------------
+*/
+
+chrome.runtime.onMessage.addListener(
+  (message, sender, sendResponse) => {
+    if (!message || !message.type) {
+      return false;
+    }
+
+    if (
+      message.type === "SEND_TO_API" ||
+      message.type === "SEND_WITHDRAWAL"
+    ) {
+      const transactionData =
+        message.data ||
+        message.payload ||
+        message;
+
+      sendTransaction(transactionData)
+        .then(sendResponse)
+        .catch((error) => {
+          sendResponse({
+            success: false,
+            message: error.message
+          });
+        });
+
+      return true;
+    }
+
+    if (message.type === "ADMIN_STATUS") {
+      const statusData = {
+        ...(message.data || {}),
+        ...(message.payload || {})
+      };
+
+      if (message.admin) {
+        statusData.admin = message.admin;
+      }
+
+      if (message.activeBank) {
+        statusData.activeBank = message.activeBank;
+      }
+
+      if (typeof message.botEnabled === "boolean") {
+        statusData.botEnabled = message.botEnabled;
+      }
+
+      sendAdminStatus(statusData)
+        .then(sendResponse)
+        .catch((error) => {
+          sendResponse({
+            success: false,
+            message: error.message
+          });
+        });
+
+      return true;
+    }
+
+    if (message.type === "GET_BANKS") {
+      fetch(`${API_BASE}/api/banks`)
+        .then(async (res) => {
+          const text = await res.text();
+
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${text}`);
+          }
+
+          return JSON.parse(text);
+        })
+        .then((banks) => {
+          sendResponse({
+            success: true,
+            data: Array.isArray(banks) ? banks : []
+          });
+        })
+        .catch((error) => {
+          console.error("Gagal ambil bank:", error);
+
+          sendResponse({
+            success: false,
+            data: [],
+            message: error.message
+          });
+        });
+
+      return true;
+    }
+
+    return false;
+  }
+);
