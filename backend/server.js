@@ -162,7 +162,7 @@ app.post('/api/admin-status', async (req, res) => {
           ? botEnabled
           : previous.botEnabled !== false,
 
-      lastSeen: lastSeen || Date.now()
+      lastSeen: new Date(Number(lastSeen || Date.now()))
     };
 
     await db.query(
@@ -180,6 +180,9 @@ app.post('/api/admin-status', async (req, res) => {
     adminStatus[adminName].activeBank,
     adminStatus[adminName].botEnabled ? 1 : 0,
     adminStatus[adminName].lastSeen
+  .toISOString()
+  .slice(0, 19)
+  .replace('T', ' ')
   ]
 );
 
