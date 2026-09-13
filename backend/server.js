@@ -21,7 +21,7 @@ const io = new Server(server, {
   }
 });
 
-const PORT = 3001;
+const PORT = 3002;
 
 // =========================
 // MIDDLEWARE
@@ -30,6 +30,25 @@ app.use(cors());
 app.use(express.json({ limit: '200kb' }));
 
 app.use('/api/banks', banksRouter);
+
+// CORS untuk Chrome Extension
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+  );
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization"
+  );
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
 
 // =========================
 // MEMORY DATABASE
