@@ -80,7 +80,7 @@ async function sendAdminStatus(payload = {}) {
 
     const result = JSON.parse(text);
 
-    console.log("Status admin berhasil dikirim:", cleanPayload);
+    // Status admin berhasil dikirim
 
     return result;
   } catch (error) {
@@ -125,7 +125,7 @@ async function sendTransaction(item = {}) {
 
     const result = JSON.parse(text);
 
-    console.log("Transaksi berhasil dikirim:", result);
+    // Transaksi berhasil dikirim
 
     return result;
   } catch (error) {
