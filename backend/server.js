@@ -50,61 +50,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// =========================
-// LOGIN OPERATOR
-// =========================
-import bcrypt from 'bcryptjs';
 
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Username dan password wajib diisi'
-      });
-    }
-
-    const [rows] = await db.query(
-      'SELECT * FROM operator_users WHERE username = ? LIMIT 1',
-      [username.trim()]
-    );
-
-    if (!rows.length) {
-      return res.status(401).json({
-        success: false,
-        message: 'Username atau password salah'
-      });
-    }
-
-    const user = rows[0];
-    const valid = await bcrypt.compare(password, user.password_hash);
-
-    if (!valid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Username atau password salah'
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'Login berhasil',
-      data: {
-        id: user.id,
-        username: user.username
-      }
-    });
-  } catch (error) {
-    console.error('[LOGIN ERROR]', error.message);
-
-    res.status(500).json({
-      success: false,
-      message: 'Terjadi kesalahan server'
-    });
-  }
-});
 
 // =========================
 // MEMORY DATABASE
