@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:3001";
+const API_BASE = "https://api-v2.botwdsis4d.com";
 
 /*
 |--------------------------------------------------------------------------

@@ -25,8 +25,8 @@ import { BanksPage } from './pages/dashboard/BanksPage.js';
 const API_BASE =
   window.location.hostname === 'localhost' ||
   window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:3001'
-    : 'https://api.botwdsis4d.com';
+    ? 'http://localhost:3002'
+    : 'https://api-v2.botwdsis4d.com';
 
 const API = {
   logs: `${API_BASE}/api/logs`,
